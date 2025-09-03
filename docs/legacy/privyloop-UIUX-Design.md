@@ -1,9 +1,9 @@
-# 🎨 loopwho - UI/UX Design Document
+# 🎨 Privyloop - UI/UX Design Document
 
 ## Design Overview
 
 **Design Philosophy**: Clean, trustworthy, and accessible privacy-focused interface  
-**Design System**: Built on shadCN UI components and MkSaaS foundation  
+**Design System**: Built on shadCN UI components
 **Target Experience**: Professional yet approachable privacy dashboard  
 **Accessibility**: WCAG 2.1 AA compliance with screen reader support  
 
@@ -88,7 +88,7 @@ flowchart TD
 
 ### 3.1 Site Map
 ```
-loopwho/
+privyloop/
 ├── Landing Page
 ├── Authentication
 │   ├── Sign Up
