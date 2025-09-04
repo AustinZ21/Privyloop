@@ -1,7 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  transpilePackages: ['@privyloop/core', '@privyloop/enterprise'],
   experimental: {
-    transpilePackages: ['@privyloop/core', '@privyloop/enterprise'],
+    esmExternals: 'loose',
   },
   env: {
     DEPLOYMENT_MODE: process.env.DEPLOYMENT_MODE || 'self-hosted',

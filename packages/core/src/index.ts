@@ -12,3 +12,6 @@ export {
   initializeDatabase,
   type Database 
 } from './database';
+
+// Auth exports
+export { auth, type Session } from './auth';
