@@ -19,7 +19,8 @@ export { migration001 } from './migrations/001-initial-schema';
 
 // Initialize database
 export const initializeDatabase = async () => {
-  const { getDb, testConnection, runMigrations } = await import('./connection');
+  const { getDb, testConnection } = await import('./connection');
+  const { runMigrations } = await import('./migrations');
   const { migration001 } = await import('./migrations/001-initial-schema');
   
   try {

@@ -69,7 +69,7 @@ export const privacyTemplates = pgTable('privacy_templates', {
   
   // Version control
   isActive: boolean('is_active').default(true).notNull(),
-  previousVersionId: uuid('previous_version_id').references(() => privacyTemplates.id),
+  previousVersionId: uuid('previous_version_id'), // Self-reference handled in relations
   
   // Audit fields
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -103,7 +103,7 @@ export type PrivacySettingsStructure = NonNullable<PrivacyTemplate['settingsStru
 export type PrivacyAIAnalysis = NonNullable<PrivacyTemplate['aiAnalysis']>;
 
 // Template versioning helpers
-export const generateTemplateVersion = () => {
+export const generateTemplateVersion = (): string => {
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');

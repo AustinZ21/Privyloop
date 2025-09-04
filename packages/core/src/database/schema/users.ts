@@ -72,6 +72,29 @@ export const insertUserSchema = createInsertSchema(users, {
   email: z.string().email('Invalid email address'),
   subscriptionTier: z.enum(['free', 'pro', 'premium', 'enterprise']),
   subscriptionStatus: z.enum(['active', 'cancelled', 'past_due', 'unpaid']),
+
+  // JSONB overrides
+  providers: z.object({
+    google: z.object({ id: z.string(), email: z.string().email() }).optional(),
+    github: z.object({ id: z.string(), username: z.string() }).optional(),
+    microsoft: z.object({ id: z.string(), email: z.string().email() }).optional(),
+  }).partial().default({}),
+
+  preferences: z.object({
+    notifications: z.object({
+      email: z.boolean(),
+      changeAlerts: z.boolean(),
+      weeklyDigest: z.boolean(),
+    }),
+    scanning: z.object({
+      frequency: z.enum(['daily', 'weekly', 'manual']),
+      autoScan: z.boolean(),
+    }),
+    privacy: z.object({
+      dataRetention: z.enum(['30d', '90d', '1y', 'forever']),
+      shareAnalytics: z.boolean(),
+    }),
+  }),
 });
 
 export const selectUserSchema = createSelectSchema(users);
@@ -112,3 +135,4 @@ export const SUBSCRIPTION_LIMITS = {
 } as const;
 
 export type SubscriptionTier = keyof typeof SUBSCRIPTION_LIMITS;
+export type SubscriptionStatus = 'active' | 'cancelled' | 'past_due' | 'unpaid';

@@ -71,6 +71,36 @@ export const insertPlatformSchema = createInsertSchema(platforms, {
   slug: z.string().min(1).max(50).regex(/^[a-z0-9-]+$/),
   domain: z.string().min(1).max(255),
   configVersion: z.string().regex(/^\d+\.\d+\.\d+$/),
+
+  // JSONB overrides to ensure parsed types match column $type
+  privacyPageUrls: z
+    .object({
+      main: z.string(),
+      ads: z.string().optional(),
+      data: z.string().optional(),
+      activity: z.string().optional(),
+    })
+    .catchall(z.string().optional()),
+
+  scrapingConfig: z.object({
+    selectors: z.record(
+      z.object({
+        selector: z.string(),
+        type: z.enum(['toggle', 'radio', 'select', 'text']),
+        expectedValues: z.array(z.string()).optional(),
+      })
+    ),
+    waitForSelectors: z.array(z.string()).optional(),
+    customScript: z.string().optional(),
+    rateLimit: z
+      .object({
+        requestsPerMinute: z.number(),
+        cooldownMinutes: z.number(),
+      })
+      .optional(),
+  }),
+
+  manifestPermissions: z.array(z.string()),
 });
 
 export const selectPlatformSchema = createSelectSchema(platforms);

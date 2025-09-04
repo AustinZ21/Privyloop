@@ -24,7 +24,9 @@ export const createPrivacySnapshot = async (db: Database, snapshotData: NewPriva
   const validatedData = insertPrivacySnapshotSchema.parse(snapshotData);
   
   try {
-    const [newSnapshot] = await db.insert(privacySnapshots).values(validatedData).returning();
+    // Let DB default handle changesSincePrevious to avoid JSONB type mismatch
+    const { changesSincePrevious: _omitChanges, ...insertData } = validatedData as any;
+    const [newSnapshot] = await db.insert(privacySnapshots).values(insertData).returning();
     return newSnapshot;
   } catch (error) {
     console.error('Error creating privacy snapshot:', error);
@@ -126,24 +128,16 @@ export const getSnapshotsWithChanges = async (
   limit: number = 50
 ): Promise<PrivacySnapshot[]> => {
   try {
-    let query = db
+    const whereExpr = and(
+      eq(privacySnapshots.hasChanges, true),
+      userId ? eq(privacySnapshots.userId, userId) : undefined,
+      platformId ? eq(privacySnapshots.platformId, platformId) : undefined,
+    );
+
+    const snapshots = await db
       .select()
       .from(privacySnapshots)
-      .where(eq(privacySnapshots.hasChanges, true));
-    
-    if (userId) {
-      query = query.where(and(eq(privacySnapshots.hasChanges, true), eq(privacySnapshots.userId, userId)));
-    }
-    
-    if (platformId) {
-      query = query.where(and(
-        eq(privacySnapshots.hasChanges, true),
-        eq(privacySnapshots.platformId, platformId),
-        userId ? eq(privacySnapshots.userId, userId) : undefined
-      ).filter(Boolean));
-    }
-    
-    const snapshots = await query
+      .where(whereExpr)
       .orderBy(desc(privacySnapshots.scannedAt))
       .limit(limit);
     
@@ -166,9 +160,15 @@ export const updatePrivacySnapshot = async (
   const validatedData = updatePrivacySnapshotSchema.parse(updateData);
   
   try {
+    // Cast changesSincePrevious to the exact JSONB shape when present
+    const updatePayload: any = { ...validatedData };
+    if (validatedData.changesSincePrevious !== undefined) {
+      updatePayload.changesSincePrevious = validatedData.changesSincePrevious as unknown as PrivacyChanges;
+    }
+
     const [updatedSnapshot] = await db
       .update(privacySnapshots)
-      .set(validatedData)
+      .set(updatePayload)
       .where(eq(privacySnapshots.id, snapshotId))
       .returning();
     
@@ -269,10 +269,11 @@ export const getUserPrivacyStats = async (db: Database, userId: string) => {
         isNotNull(privacySnapshots.riskScore)
       ));
     
+    const avgVal = Number(averageRiskScore.avg ?? 0);
     return {
       totalSnapshots: totalSnapshots.count,
       snapshotsWithChanges: snapshotsWithChanges.count,
-      averageRiskScore: Math.round(averageRiskScore.avg || 0),
+      averageRiskScore: Math.round(avgVal),
     };
   } catch (error) {
     console.error('Error getting user privacy stats:', error);

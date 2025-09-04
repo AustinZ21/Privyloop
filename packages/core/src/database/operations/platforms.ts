@@ -247,13 +247,14 @@ export const getPlatformStats = async (db: Database) => {
  */
 export const isPlatformSlugAvailable = async (db: Database, slug: string, excludeId?: string): Promise<boolean> => {
   try {
-    let query = db.select().from(platforms).where(eq(platforms.slug, slug));
-    
-    if (excludeId) {
-      query = query.where(ne(platforms.id, excludeId));
-    }
-    
-    const [existingPlatform] = await query.limit(1);
+    const [existingPlatform] = await db
+      .select()
+      .from(platforms)
+      .where(and(
+        eq(platforms.slug, slug),
+        excludeId ? ne(platforms.id, excludeId) : undefined
+      ))
+      .limit(1);
     return !existingPlatform;
   } catch (error) {
     console.error('Error checking platform slug availability:', error);

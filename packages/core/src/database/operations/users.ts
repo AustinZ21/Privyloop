@@ -11,6 +11,7 @@ import {
   type NewUser, 
   type UpdateUser, 
   type SubscriptionTier,
+  type SubscriptionStatus,
   insertUserSchema,
   updateUserSchema,
   SUBSCRIPTION_LIMITS
@@ -133,7 +134,7 @@ export const updateUserSubscription = async (
   userId: string, 
   subscriptionData: {
     subscriptionTier: SubscriptionTier;
-    subscriptionStatus?: string;
+    subscriptionStatus?: SubscriptionStatus;
     stripeCustomerId?: string;
     stripeSubscriptionId?: string;
   }

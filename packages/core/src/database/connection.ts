@@ -4,6 +4,7 @@
  */
 
 import { drizzle } from 'drizzle-orm/postgres-js';
+import { sql } from 'drizzle-orm';
 import postgres from 'postgres';
 import { config, getConnectionOptions } from './config';
 import { schema, type DatabaseSchema } from './schema';
@@ -72,8 +73,8 @@ export const testConnection = async () => {
     const result = await db.execute(sql`SELECT NOW() as timestamp, version() as version`);
     
     console.log('✅ Database connection test successful:', {
-      timestamp: result.rows[0]?.timestamp,
-      version: result.rows[0]?.version?.substring(0, 50) + '...',
+      timestamp: result[0]?.timestamp,
+      version: result[0]?.version?.toString().substring(0, 50) + '...',
     });
     
     return true;

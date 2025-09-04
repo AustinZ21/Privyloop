@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "description": "Browser extension for PrivyLoop privacy scraping",
   "scripts": {
-    "build": "webpack --mode=production",
-    "dev": "webpack --mode=development --watch",
+    "build": "webpack --mode=production --config webpack.config.js",
+    "dev": "webpack --mode=development --watch --config webpack.config.js",
     "lint": "eslint src --ext .ts,.tsx",
     "test": "jest",
     "type-check": "tsc --noEmit",

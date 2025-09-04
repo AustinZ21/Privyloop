@@ -34,7 +34,7 @@ export const getExecutedMigrations = async (db: Database): Promise<string[]> => 
     const result = await db.execute(sql`
       SELECT id FROM migrations ORDER BY executed_at ASC;
     `);
-    return result.rows.map(row => row.id as string);
+    return result.map((row: any) => row.id as string);
   } catch (error) {
     // If migrations table doesn't exist, return empty array
     return [];

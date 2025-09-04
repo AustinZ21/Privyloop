@@ -5,6 +5,8 @@ const nextConfig = {
   env: {
     DEPLOYMENT_MODE: process.env.DEPLOYMENT_MODE || 'self-hosted',
   },
+  // Use custom dist directory to avoid potential lock on .next
+  distDir: 'build'
 }
 
 module.exports = nextConfig;

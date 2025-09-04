@@ -97,6 +97,25 @@ export const insertPrivacySnapshotSchema = createInsertSchema(privacySnapshots, 
   confidenceScore: z.number().min(0).max(1),
   riskScore: z.number().min(0).max(100).optional(),
   retentionPolicy: z.enum(['30d', '90d', '1y', 'forever']),
+
+  // JSONB overrides to align with $type definitions
+  userSettings: z.record(z.record(z.any())),
+  changesSincePrevious: z.record(
+    z.record(
+      z.object({
+        oldValue: z.any(),
+        newValue: z.any(),
+        changeType: z.enum(['user', 'platform', 'unknown']),
+        detectedAt: z.string(),
+      })
+    )
+  ),
+  riskFactors: z.array(z.string()),
+  recommendations: z.object({
+    high: z.array(z.string()),
+    medium: z.array(z.string()),
+    low: z.array(z.string()),
+  }),
 });
 
 export const selectPrivacySnapshotSchema = createSelectSchema(privacySnapshots);

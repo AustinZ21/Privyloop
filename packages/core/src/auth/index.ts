@@ -32,9 +32,9 @@ export const auth = betterAuth({
   emailVerification: {
     sendOnSignUp: true,
     expiresIn: 60 * 60 * 24, // 24 hours
-    sendVerificationEmail: async (user, url) => {
+    sendVerificationEmail: async (data, url) => {
       // Email sending implementation will be added in Task 003
-      console.log(`Verification email for ${user.email}: ${url}`);
+      console.log(`Verification email for ${data.user.email}: ${url}`);
     },
   },
   session: {

@@ -1,8 +1,33 @@
 // Core exports
-export * from './types';
 export * from './features';
 export * from './utils';
-export * from './validation';
+
+// Type exports (explicit to avoid conflicts)
+export type { 
+  DeploymentMode, 
+  FeatureFlags, 
+  PlatformConfig, 
+  User, 
+  Platform, 
+  PrivacySettings 
+} from './types';
+
+// Validation exports (schemas and validation-specific types)
+export {
+  userSchema,
+  createUserSchema,
+  platformSchema,
+  createPlatformSchema,
+  privacySettingsSchema,
+  updatePrivacySettingsSchema,
+  deploymentModeSchema,
+  featureFlagsSchema,
+  environmentSchema,
+  type CreateUser,
+  type CreatePlatform,
+  type UpdatePrivacySettings,
+  type Environment
+} from './validation';
 
 // Database exports (avoiding conflicts)
 export { 
