@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Progress } from '@/components/ui/progress';
+import { cn } from 'src/lib/utils';
+import { Button } from 'src/components/ui/button';
+import { Card } from 'src/components/ui/card';
+import { Badge } from 'src/components/ui/badge';
+import { Input } from 'src/components/ui/input';
+import { Progress } from 'src/components/ui/progress';
+import Sidebar from 'src/components/ui/sidebar';
 import { 
   Shield, 
   CheckCircle, 
@@ -29,9 +30,6 @@ import {
   AlertTriangle
 } from 'lucide-react';
 
-const cn2 = (...classes: Array<string | false | null | undefined>) => {
-  return classes.filter(Boolean).join(" ");
-};
 
 interface Platform {
   id: string;
@@ -144,7 +142,7 @@ const RiskBadge = ({ level }: { level: Platform['riskLevel'] }) => {
   };
 
   return (
-    <Badge variant="outline" className={cn2("text-xs font-medium", variants[level])}>
+    <Badge variant="outline" className={cn("text-xs font-medium", variants[level])}>
       {level.charAt(0).toUpperCase() + level.slice(1)} Risk
     </Badge>
   );
@@ -155,7 +153,7 @@ const PlatformCard = ({ platform, isUpgradeGated = false }: { platform: Platform
 
   return (
     <Card 
-      className={cn2(
+      className={cn(
         "relative p-6 transition-all duration-300 cursor-pointer group",
         "bg-[#101518] border-[#233037] hover:border-[#34D3A6]/30",
         "hover:shadow-lg hover:shadow-[#34D3A6]/10 hover:-translate-y-1",
@@ -207,12 +205,12 @@ const PlatformCard = ({ platform, isUpgradeGated = false }: { platform: Platform
           <div className="flex justify-between text-sm">
             <span className="text-gray-400">Privacy Score:</span>
             <div className="flex items-center space-x-2">
-              <span className={cn2(
+              <span className={cn(
                 "text-sm font-medium",
                 platform.privacyScore >= 80 ? "text-[#34D3A6]" :
                 platform.privacyScore >= 60 ? "text-yellow-400" : "text-red-400"
               )}>{platform.privacyScore}/100</span>
-              <div className={cn2(
+              <div className={cn(
                 "w-12 h-1.5 rounded-full",
                 platform.privacyScore >= 80 ? "bg-[#34D3A6]" :
                 platform.privacyScore >= 60 ? "bg-yellow-400" : "bg-red-400"
@@ -229,7 +227,7 @@ const PlatformCard = ({ platform, isUpgradeGated = false }: { platform: Platform
       </div>
 
       <Button 
-        className={cn2(
+        className={cn(
           "w-full bg-[#34D3A6] hover:bg-[#34D3A6]/90 text-black font-medium",
           "transition-all duration-200",
           isHovered && "shadow-lg shadow-[#34D3A6]/20"
@@ -243,153 +241,7 @@ const PlatformCard = ({ platform, isUpgradeGated = false }: { platform: Platform
   );
 };
 
-const Sidebar = ({ links, isOpen, onClose }: { 
-  links: SidebarLink[]; 
-  isOpen: boolean; 
-  onClose: () => void; 
-}) => {
-  return (
-    <>
-      {/* Mobile overlay */}
-      {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
-          onClick={onClose}
-        />
-      )}
-      
-      {/* Sidebar */}
-      <aside className={cn2(
-        "fixed lg:static inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-[#0B0F12] to-[#101518]",
-        "border-r border-[#233037] shadow-xl",
-        "transform transition-transform duration-300 ease-in-out lg:translate-x-0",
-        isOpen ? "translate-x-0" : "-translate-x-full"
-      )}>
-        <div className="flex items-center justify-between p-6 border-b border-[#233037]/50">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-[#34D3A6] to-[#22B08B] rounded-xl flex items-center justify-center shadow-lg">
-              <Shield className="w-6 h-6 text-black" />
-            </div>
-            <div>
-              <span className="text-xl font-bold text-white">PrivyLoop</span>
-              <div className="text-xs text-gray-400">Privacy Dashboard</div>
-            </div>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="lg:hidden text-gray-400 hover:text-white"
-          >
-            <X className="w-5 h-5" />
-          </Button>
-        </div>
 
-        <nav className="p-4 space-y-1">
-          {links.map((link) => (
-            <a
-              key={link.id}
-              href="#"
-              className={cn2(
-                "group flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200",
-                "hover:translate-x-1",
-                link.active 
-                  ? "bg-gradient-to-r from-[#34D3A6]/20 to-[#34D3A6]/10 text-[#34D3A6] border border-[#34D3A6]/30 shadow-lg" 
-                  : "text-gray-400 hover:text-white hover:bg-[#141A1E]/80 hover:border hover:border-[#233037]"
-              )}
-            >
-              <div className={cn2(
-                "p-1.5 rounded-lg transition-colors",
-                link.active
-                  ? "bg-[#34D3A6]/20"
-                  : "group-hover:bg-[#233037]/50"
-              )}>
-                {link.icon}
-              </div>
-              <span className="font-medium">{link.label}</span>
-              {link.active && (
-                <div className="ml-auto w-2 h-2 bg-[#34D3A6] rounded-full" />
-              )}
-            </a>
-          ))}
-        </nav>
-
-        <div className="absolute bottom-4 left-4 right-4">
-          <div className="bg-[#141A1E]/50 backdrop-blur-sm border border-[#233037] rounded-xl p-4">
-            <div className="flex items-center space-x-3 mb-3">
-              <div className="w-8 h-8 bg-[#34D3A6] rounded-full flex items-center justify-center text-black font-bold text-sm">
-                U
-              </div>
-              <div>
-                <div className="text-sm font-medium text-white">Free Plan</div>
-                <div className="text-xs text-gray-400">3/3 platforms</div>
-              </div>
-            </div>
-            <Button className="w-full bg-gradient-to-r from-[#34D3A6] to-[#22B08B] hover:from-[#22B08B] hover:to-[#1A8E73] text-black font-medium text-sm py-2">
-              Upgrade to Pro
-            </Button>
-          </div>
-        </div>
-      </aside>
-    </>
-  );
-};
-
-const TopBar = ({ onMenuClick, scanStatus }: { 
-  onMenuClick: () => void; 
-  scanStatus: { active: boolean; count: number; }; 
-}) => {
-  return (
-    <header className="bg-[#0B0F12] border-b border-[#233037] px-6 py-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onMenuClick}
-            className="lg:hidden text-gray-400 hover:text-white"
-          >
-            <Menu className="w-5 h-5" />
-          </Button>
-          
-          <div>
-            <h1 className="text-2xl font-bold text-white">Privacy Dashboard</h1>
-            <p className="text-gray-400">Monitor and manage your digital privacy</p>
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2 px-3 py-2 bg-[#141A1E] rounded-lg border border-[#233037]">
-            {scanStatus.active ? (
-              <>
-                <Loader2 className="w-4 h-4 text-[#34D3A6] animate-spin" />
-                <span className="text-sm text-white">Scanning {scanStatus.count} platforms</span>
-              </>
-            ) : (
-              <>
-                <CheckCircle className="w-4 h-4 text-[#34D3A6]" />
-                <span className="text-sm text-white">All scans complete</span>
-              </>
-            )}
-          </div>
-
-          <Button
-            variant="outline"
-            size="sm"
-            className="border-[#233037] text-gray-400 hover:text-white hover:border-[#34D3A6]/30"
-          >
-            <Bell className="w-4 h-4 mr-2" />
-            Alerts
-          </Button>
-
-          <div className="w-8 h-8 bg-[#34D3A6] rounded-full flex items-center justify-center">
-            <span className="text-black font-medium text-sm">U</span>
-          </div>
-        </div>
-      </div>
-    </header>
-  );
-};
 
 export function PrivacyDashboard({
   platforms = defaultPlatforms,
@@ -397,7 +249,7 @@ export function PrivacyDashboard({
   showUpgradeHint = true,
   freeLimit = 3
 }: PrivacyDashboardProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredPlatforms = platforms.filter(platform =>
@@ -409,40 +261,73 @@ export function PrivacyDashboard({
     count: platforms.filter(p => p.status === 'scanning' || p.status === 'connecting').length
   };
 
+  const handleTabClick = (tabId: string) => {
+    setActiveTab(tabId);
+  };
+
   useEffect(() => {
     document.documentElement.classList.add('dark');
     return () => document.documentElement.classList.remove('dark');
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#0B0F12] text-white flex">
+    <div className="h-screen bg-[#0B0F12] text-white flex overflow-hidden">
       <Sidebar 
-        links={sidebarLinks} 
-        isOpen={sidebarOpen} 
-        onClose={() => setSidebarOpen(false)} 
+        activeItem={activeTab}
+        onItemClick={handleTabClick}
       />
       
-      <div className="flex-1 flex flex-col">
-        <TopBar 
-          onMenuClick={() => setSidebarOpen(true)} 
-          scanStatus={scanStatus}
-        />
-        
-        <main className="flex-1 p-4 sm:p-6">
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <main className="flex-1 p-4 sm:p-6 overflow-y-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h1 className="text-2xl font-bold text-white">Privacy Dashboard</h1>
+                <p className="text-neutral-400">Monitor and manage your digital privacy</p>
+              </div>
+              
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2 px-3 py-2 bg-bg-700 rounded-lg border border-neutral-700">
+                  {scanStatus.active ? (
+                    <>
+                      <Loader2 className="w-4 h-4 text-brand-500 animate-spin" />
+                      <span className="text-sm text-white">Scanning {scanStatus.count} platforms</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4 text-brand-500" />
+                      <span className="text-sm text-white">All scans complete</span>
+                    </>
+                  )}
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-neutral-700 text-neutral-400 hover:text-white hover:border-brand-500/30"
+                >
+                  <Bell className="w-4 h-4 mr-2" />
+                  Alerts
+                </Button>
+              </div>
+            </div>
+          </div>
+
           {/* Search and filters */}
           <div className="mb-8">
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
               <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-neutral-400" />
                 <Input
                   placeholder="Search platforms..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 bg-[#141A1E] border-[#233037] text-white placeholder:text-gray-400 focus:border-[#34D3A6]/50"
+                  className="pl-10 bg-bg-700 border-neutral-700 text-white placeholder:text-neutral-400 focus:border-brand-500/50"
                 />
               </div>
               
-              <Button className="bg-[#34D3A6] hover:bg-[#34D3A6]/90 text-black font-medium">
+              <Button className="bg-brand-500 hover:bg-brand-600 text-bg-900 font-medium">
                 <Plus className="w-4 h-4 mr-2" />
                 Add Platform
               </Button>
@@ -451,22 +336,22 @@ export function PrivacyDashboard({
 
           {/* Stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
-            <Card className="p-4 sm:p-6 bg-[#101518] border-[#233037]">
+            <Card className="p-4 sm:p-6 bg-bg-800 border-neutral-700">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-400 text-sm">Connected Platforms</p>
+                  <p className="text-neutral-400 text-sm">Connected Platforms</p>
                   <p className="text-xl sm:text-2xl font-bold text-white">
                     {platforms.filter(p => p.status === 'connected').length}
                   </p>
                 </div>
-                <Wifi className="w-6 h-6 sm:w-8 sm:h-8 text-[#34D3A6]" />
+                <Wifi className="w-6 h-6 sm:w-8 sm:h-8 text-brand-500" />
               </div>
             </Card>
 
-            <Card className="p-4 sm:p-6 bg-[#101518] border-[#233037]">
+            <Card className="p-4 sm:p-6 bg-bg-800 border-neutral-700">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-400 text-sm">High Risk</p>
+                  <p className="text-neutral-400 text-sm">High Risk</p>
                   <p className="text-2xl font-bold text-red-400">
                     {platforms.filter(p => p.riskLevel === 'high').length}
                   </p>
@@ -475,22 +360,22 @@ export function PrivacyDashboard({
               </div>
             </Card>
 
-            <Card className="p-4 sm:p-6 bg-[#101518] border-[#233037]">
+            <Card className="p-4 sm:p-6 bg-bg-800 border-neutral-700">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-400 text-sm">Data Points</p>
+                  <p className="text-neutral-400 text-sm">Data Points</p>
                   <p className="text-xl sm:text-2xl font-bold text-white">
                     {platforms.reduce((sum, p) => sum + (p.dataPoints || 0), 0).toLocaleString()}
                   </p>
                 </div>
-                <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-[#34D3A6]" />
+                <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-brand-500" />
               </div>
             </Card>
 
-            <Card className="p-4 sm:p-6 bg-[#101518] border-[#233037]">
+            <Card className="p-4 sm:p-6 bg-bg-800 border-neutral-700">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-400 text-sm">Active Scans</p>
+                  <p className="text-neutral-400 text-sm">Active Scans</p>
                   <p className="text-2xl font-bold text-yellow-400">
                     {scanStatus.count}
                   </p>
