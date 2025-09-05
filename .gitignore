@@ -43,3 +43,21 @@ logs
 
 # Personal files
 CLAUDE.md
+
+# Turbo cache
+.turbo/
+
+# Package builds
+packages/**/dist/
+packages/web/.next/
+packages/web/build/
+
+# TypeScript build info
+**/tsconfig.tsbuildinfo
+
+# Transpiled JS accidentally emitted into src
+packages/core/src/**/*.js
+
+# Misc stray
+nul
+packages/web/nul
