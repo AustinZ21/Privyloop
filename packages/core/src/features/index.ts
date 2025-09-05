@@ -1,5 +1,7 @@
 import type { DeploymentMode, FeatureFlags, PlatformConfig } from '../types';
 
+export type SubscriptionTier = 'free' | 'pro' | 'premium' | 'enterprise';
+
 /**
  * Detects the deployment mode from environment variables
  */
@@ -26,6 +28,14 @@ export function getFeatureFlags(deploymentMode?: DeploymentMode): FeatureFlags {
       customBranding: true,
       ssoIntegration: true,
       apiAccess: true,
+      // Authentication features - cloud deployment
+      emailAuth: true,
+      socialAuth: true,
+      emailVerification: true,
+      managedEmail: true,
+      sessionLimits: true,
+      advancedSecurity: true,
+      auditLogs: true,
     };
   }
   
@@ -37,6 +47,14 @@ export function getFeatureFlags(deploymentMode?: DeploymentMode): FeatureFlags {
     customBranding: false,
     ssoIntegration: false,
     apiAccess: true,
+    // Authentication features - self-hosted deployment
+    emailAuth: true,
+    socialAuth: true,
+    emailVerification: true,
+    managedEmail: false, // Users provide own SMTP
+    sessionLimits: false, // No Redis for session tracking
+    advancedSecurity: false, // No enterprise security features
+    auditLogs: false, // Basic logging only
   };
 }
 
@@ -61,6 +79,48 @@ export function getPlatformConfig(): PlatformConfig {
     version: process.env.npm_package_version || '0.1.0',
     environment: (process.env.NODE_ENV as any) || 'development',
   };
+}
+
+/**
+ * Gets authentication-specific feature flags based on subscription tier
+ */
+export function getAuthFeatureFlags(
+  deploymentMode?: DeploymentMode, 
+  subscriptionTier: SubscriptionTier = 'free'
+): Pick<FeatureFlags, 'emailAuth' | 'socialAuth' | 'emailVerification' | 'managedEmail' | 'sessionLimits' | 'advancedSecurity' | 'auditLogs'> {
+  const mode = deploymentMode || detectDeploymentMode();
+  const baseFlags = getFeatureFlags(mode);
+  
+  // Base authentication features (available to all tiers)
+  const authFlags = {
+    emailAuth: baseFlags.emailAuth,
+    socialAuth: baseFlags.socialAuth,
+    emailVerification: baseFlags.emailVerification,
+    managedEmail: baseFlags.managedEmail,
+    sessionLimits: false,
+    advancedSecurity: false,
+    auditLogs: false,
+  };
+
+  // Subscription tier enhancements (only for cloud deployment)
+  if (mode === 'cloud') {
+    switch (subscriptionTier) {
+      case 'pro':
+        authFlags.sessionLimits = true;
+        break;
+      case 'premium':
+        authFlags.sessionLimits = true;
+        authFlags.advancedSecurity = true;
+        break;
+      case 'enterprise':
+        authFlags.sessionLimits = true;
+        authFlags.advancedSecurity = true;
+        authFlags.auditLogs = true;
+        break;
+    }
+  }
+
+  return authFlags;
 }
 
 /**

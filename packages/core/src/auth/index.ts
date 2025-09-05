@@ -6,6 +6,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { getDb } from "../database";
+import { emailService } from "../services/email";
 
 export const auth = betterAuth({
   database: drizzleAdapter(getDb(), {
@@ -33,8 +34,12 @@ export const auth = betterAuth({
     sendOnSignUp: true,
     expiresIn: 60 * 60 * 24, // 24 hours
     sendVerificationEmail: async (data, url) => {
-      // Email sending implementation will be added in Task 003
-      console.log(`Verification email for ${data.user.email}: ${url}`);
+      const verificationUrl = typeof url === 'string' ? url : url?.url || '';
+      const success = await emailService.sendVerificationEmail(data.user.email, verificationUrl);
+      if (!success) {
+        console.error(`Failed to send verification email to ${data.user.email}`);
+        throw new Error('Failed to send verification email');
+      }
     },
   },
   session: {

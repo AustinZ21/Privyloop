@@ -62,6 +62,14 @@
     "./database": {
       "types": "./dist/database/index.d.ts",
       "default": "./dist/database/index.js"
+    },
+    "./auth": {
+      "types": "./dist/auth/index.d.ts",
+      "default": "./dist/auth/index.js"
+    },
+    "./services": {
+      "types": "./dist/services/index.d.ts",
+      "default": "./dist/services/index.js"
     }
   }
 }

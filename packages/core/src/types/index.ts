@@ -8,6 +8,14 @@ export interface FeatureFlags {
   customBranding: boolean;
   ssoIntegration: boolean;
   apiAccess: boolean;
+  // Authentication features
+  emailAuth: boolean;
+  socialAuth: boolean;
+  emailVerification: boolean;
+  managedEmail: boolean;
+  sessionLimits: boolean;
+  advancedSecurity: boolean;
+  auditLogs: boolean;
 }
 
 export interface PlatformConfig {

@@ -1,6 +1,7 @@
 import {
   detectDeploymentMode,
   getFeatureFlags,
+  getAuthFeatureFlags,
   isFeatureEnabled,
   getPlatformConfig,
   withFeatureFlag,
@@ -51,6 +52,14 @@ describe('Feature Flag System', () => {
         customBranding: true,
         ssoIntegration: true,
         apiAccess: true,
+        // Authentication features - cloud deployment
+        emailAuth: true,
+        socialAuth: true,
+        emailVerification: true,
+        managedEmail: true,
+        sessionLimits: true,
+        advancedSecurity: true,
+        auditLogs: true,
       });
     });
 
@@ -63,6 +72,14 @@ describe('Feature Flag System', () => {
         customBranding: false,
         ssoIntegration: false,
         apiAccess: true,
+        // Authentication features - self-hosted deployment
+        emailAuth: true,
+        socialAuth: true,
+        emailVerification: true,
+        managedEmail: false,
+        sessionLimits: false,
+        advancedSecurity: false,
+        auditLogs: false,
       });
     });
 
@@ -148,6 +165,79 @@ describe('Feature Flag System', () => {
       const ComponentFunction = () => 'rendered';
       const result = withFeatureFlag('advancedAnalytics', ComponentFunction, null);
       expect(result).toBe(ComponentFunction);
+    });
+  });
+
+  describe('getAuthFeatureFlags', () => {
+    it('should return base auth features for free tier in cloud mode', () => {
+      const authFlags = getAuthFeatureFlags('cloud', 'free');
+      expect(authFlags).toEqual({
+        emailAuth: true,
+        socialAuth: true,
+        emailVerification: true,
+        managedEmail: true,
+        sessionLimits: false,
+        advancedSecurity: false,
+        auditLogs: false,
+      });
+    });
+
+    it('should return enhanced features for pro tier in cloud mode', () => {
+      const authFlags = getAuthFeatureFlags('cloud', 'pro');
+      expect(authFlags).toEqual({
+        emailAuth: true,
+        socialAuth: true,
+        emailVerification: true,
+        managedEmail: true,
+        sessionLimits: true,
+        advancedSecurity: false,
+        auditLogs: false,
+      });
+    });
+
+    it('should return premium features for premium tier in cloud mode', () => {
+      const authFlags = getAuthFeatureFlags('cloud', 'premium');
+      expect(authFlags).toEqual({
+        emailAuth: true,
+        socialAuth: true,
+        emailVerification: true,
+        managedEmail: true,
+        sessionLimits: true,
+        advancedSecurity: true,
+        auditLogs: false,
+      });
+    });
+
+    it('should return all features for enterprise tier in cloud mode', () => {
+      const authFlags = getAuthFeatureFlags('cloud', 'enterprise');
+      expect(authFlags).toEqual({
+        emailAuth: true,
+        socialAuth: true,
+        emailVerification: true,
+        managedEmail: true,
+        sessionLimits: true,
+        advancedSecurity: true,
+        auditLogs: true,
+      });
+    });
+
+    it('should ignore subscription tier for self-hosted mode', () => {
+      const authFlags = getAuthFeatureFlags('self-hosted', 'enterprise');
+      expect(authFlags).toEqual({
+        emailAuth: true,
+        socialAuth: true,
+        emailVerification: true,
+        managedEmail: false,
+        sessionLimits: false,
+        advancedSecurity: false,
+        auditLogs: false,
+      });
+    });
+
+    it('should use detected deployment mode when not provided', () => {
+      process.env.DEPLOYMENT_MODE = 'cloud';
+      const authFlags = getAuthFeatureFlags(undefined, 'pro');
+      expect(authFlags.sessionLimits).toBe(true);
     });
   });
 

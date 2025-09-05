@@ -13,9 +13,13 @@ import {
   FileText,
   Bell,
   HelpCircle,
-  Shield
+  Shield,
+  User,
+  UserPlus
 } from 'lucide-react';
 import { cn } from 'src/lib/utils';
+import { useAuthState, signOut } from 'src/lib/auth-client';
+import { useDialogManager } from 'src/lib/dialog-manager';
 
 // Type definition for a navigation item
 interface NavigationItem {
@@ -47,6 +51,10 @@ const navigationItems: NavigationItem[] = [
 export default function Sidebar({ className = "", activeItem = "dashboard", onItemClick }: SidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  
+  // Authentication state and dialog management
+  const { isAuthenticated, isLoading, user } = useAuthState();
+  const { open } = useDialogManager();
 
   useEffect(() => {
     const handleResize = () => {
@@ -65,8 +73,31 @@ export default function Sidebar({ className = "", activeItem = "dashboard", onIt
   const toggleSidebar = () => setIsOpen(!isOpen);
   const toggleCollapse = () => setIsCollapsed(!isCollapsed);
 
-  const handleItemClick = (itemId: string) => {
-    onItemClick?.(itemId);
+  const handleItemClick = async (itemId: string) => {
+    // Handle authentication-specific actions
+    switch (itemId) {
+      case 'login':
+        open('login');
+        break;
+      case 'signup':
+        open('signup');
+        break;
+      case 'logout':
+        try {
+          await signOut();
+          // Optionally redirect to home page
+          window.location.href = '/';
+        } catch (error) {
+          console.error('Logout failed:', error);
+        }
+        break;
+      default:
+        // Handle regular navigation
+        onItemClick?.(itemId);
+        break;
+    }
+    
+    // Close mobile sidebar
     if (window.innerWidth < 768) {
       setIsOpen(false);
     }
@@ -212,56 +243,129 @@ export default function Sidebar({ className = "", activeItem = "dashboard", onIt
 
         {/* Footer / User Profile Section */}
         <div className="mt-auto border-t border-neutral-700">
-          <div className={cn("border-b border-neutral-700 bg-bg-900", isCollapsed ? 'py-3 px-2' : 'p-3')}>
-            {!isCollapsed ? (
-              <div className="flex items-center px-3 py-2 rounded-md bg-bg-700 hover:bg-neutral-700 transition-colors duration-200">
-                <div className="w-8 h-8 bg-brand-500 rounded-full flex items-center justify-center">
-                  <span className="text-bg-900 font-medium text-sm">JD</span>
-                </div>
-                <div className="flex-1 min-w-0 ml-2.5">
-                  <p className="text-sm font-medium text-white truncate">John Doe</p>
-                  <p className="text-xs text-neutral-400 truncate">Privacy Admin</p>
-                </div>
-                <div className="w-2 h-2 bg-green-500 rounded-full ml-2" title="Online" />
-              </div>
-            ) : (
-              <div className="flex justify-center">
-                <div className="relative">
-                  <div className="w-9 h-9 bg-brand-500 rounded-full flex items-center justify-center">
-                    <span className="text-bg-900 font-medium text-sm">JD</span>
+          {isLoading ? (
+            /* Loading State */
+            <div className="p-3 flex justify-center">
+              <div className="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : isAuthenticated && user ? (
+            /* Authenticated User Profile */
+            <>
+              <div className={cn("border-b border-neutral-700 bg-bg-900", isCollapsed ? 'py-3 px-2' : 'p-3')}>
+                {!isCollapsed ? (
+                  <div className="flex items-center px-3 py-2 rounded-md bg-bg-700 hover:bg-neutral-700 transition-colors duration-200">
+                    <div className="w-8 h-8 bg-brand-500 rounded-full flex items-center justify-center">
+                      <span className="text-bg-900 font-medium text-sm">
+                        {user.name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || 'U'}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0 ml-2.5">
+                      <p className="text-sm font-medium text-white truncate">
+                        {user.name || user.email?.split('@')[0] || 'User'}
+                      </p>
+                      <p className="text-xs text-neutral-400 truncate">
+                        {user.emailVerified ? 'Privacy Admin' : 'Unverified'}
+                      </p>
+                    </div>
+                    <div className={cn(
+                      "w-2 h-2 rounded-full ml-2",
+                      user.emailVerified ? "bg-green-500" : "bg-yellow-500"
+                    )} title={user.emailVerified ? "Verified" : "Pending verification"} />
                   </div>
-                  <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-bg-800" />
-                </div>
+                ) : (
+                  <div className="flex justify-center">
+                    <div className="relative">
+                      <div className="w-9 h-9 bg-brand-500 rounded-full flex items-center justify-center">
+                        <span className="text-bg-900 font-medium text-sm">
+                          {user.name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || 'U'}
+                        </span>
+                      </div>
+                      <div className={cn(
+                        "absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-bg-800",
+                        user.emailVerified ? "bg-green-500" : "bg-yellow-500"
+                      )} />
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-          <div className="p-3">
-            <button
-              onClick={() => handleItemClick("logout")}
-              className={cn(
-                "w-full flex items-center rounded-md text-left transition-all duration-200 group relative",
-                "text-red-400 hover:bg-red-500/10 hover:text-red-300",
-                isCollapsed ? "justify-center p-2.5" : "space-x-2.5 px-3 py-2.5"
-              )}
-              title={isCollapsed ? "Logout" : undefined}
-            >
-              <div className="flex items-center justify-center min-w-[24px]">
-                <LogOut className="h-4 w-4 flex-shrink-0 text-red-400 group-hover:text-red-300" />
+              <div className="p-3">
+                <button
+                  onClick={() => handleItemClick("logout")}
+                  className={cn(
+                    "w-full flex items-center rounded-md text-left transition-all duration-200 group relative",
+                    "text-red-400 hover:bg-red-500/10 hover:text-red-300",
+                    isCollapsed ? "justify-center p-2.5" : "space-x-2.5 px-3 py-2.5"
+                  )}
+                  title={isCollapsed ? "Logout" : undefined}
+                >
+                  <div className="flex items-center justify-center min-w-[24px]">
+                    <LogOut className="h-4 w-4 flex-shrink-0 text-red-400 group-hover:text-red-300" />
+                  </div>
+                  
+                  {!isCollapsed && (
+                    <span className="text-sm">Logout</span>
+                  )}
+                  
+                  {isCollapsed && (
+                    <div className="absolute left-full ml-2 px-2 py-1 bg-bg-900 text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50 border border-neutral-700">
+                      Logout
+                      <div className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-1 w-1.5 h-1.5 bg-bg-900 rotate-45 border-l border-b border-neutral-700" />
+                    </div>
+                  )}
+                </button>
               </div>
-              
-              {!isCollapsed && (
-                <span className="text-sm">Logout</span>
+            </>
+          ) : (
+            /* Unauthenticated State - Login/Signup Buttons */
+            <div className="p-3 space-y-2">
+              {!isCollapsed ? (
+                <>
+                  <button
+                    onClick={() => handleItemClick("login")}
+                    className="w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-md text-left transition-all duration-200 bg-brand-500 hover:bg-brand-600 text-black font-medium"
+                  >
+                    <User className="h-4 w-4 flex-shrink-0" />
+                    <span className="text-sm">Sign In</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => handleItemClick("signup")}
+                    className="w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-md text-left transition-all duration-200 border border-brand-500 text-brand-500 hover:bg-brand-500/10"
+                  >
+                    <UserPlus className="h-4 w-4 flex-shrink-0" />
+                    <span className="text-sm">Sign Up</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => handleItemClick("login")}
+                    className="w-full p-2.5 rounded-md transition-all duration-200 bg-brand-500 hover:bg-brand-600 text-black font-medium flex justify-center relative group"
+                    title="Sign In"
+                  >
+                    <User className="h-4 w-4" />
+                    <div className="absolute left-full ml-2 px-2 py-1 bg-bg-900 text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50 border border-neutral-700">
+                      Sign In
+                      <div className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-1 w-1.5 h-1.5 bg-bg-900 rotate-45 border-l border-b border-neutral-700" />
+                    </div>
+                  </button>
+                  
+                  <button
+                    onClick={() => handleItemClick("signup")}
+                    className="w-full p-2.5 rounded-md transition-all duration-200 border border-brand-500 text-brand-500 hover:bg-brand-500/10 flex justify-center relative group"
+                    title="Sign Up"
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    <div className="absolute left-full ml-2 px-2 py-1 bg-bg-900 text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50 border border-neutral-700">
+                      Sign Up
+                      <div className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-1 w-1.5 h-1.5 bg-bg-900 rotate-45 border-l border-b border-neutral-700" />
+                    </div>
+                  </button>
+                </>
               )}
-              
-              {isCollapsed && (
-                <div className="absolute left-full ml-2 px-2 py-1 bg-bg-900 text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50 border border-neutral-700">
-                  Logout
-                  <div className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-1 w-1.5 h-1.5 bg-bg-900 rotate-45 border-l border-b border-neutral-700" />
-                </div>
-              )}
-            </button>
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </>

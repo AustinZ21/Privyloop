@@ -154,3 +154,118 @@ Output format
 - Source: `docs/privyloop-PRD.md`
 
 
+
+### Authentication UX — Plan & Recommendations
+
+Implementation Plan — Confirmed
+
+1. Dashboard Style Reference
+   - Check existing dashboard components first
+   - Match colors, typography, spacing, button styles
+   - Use established design patterns
+
+2. Modal Trigger Strategy
+   - Login button in header/navigation → opens login modal
+   - Sign up CTA buttons throughout site → opens signup modal
+   - Auto-trigger on protected route access → opens login modal
+
+3. Social Login Priority
+   - Order: Google → Microsoft → GitHub
+
+4. Authentication Flow Structure
+   - Login/Signup: Modal-based (Radix UI dialogs)
+   - Forgot Password: Dedicated page (/forgot-password)
+   - Password Reset: Dedicated page (/reset-password/[token])
+
+5. reCAPTCHA Implementation
+   - Open Source (self-hosted): NO reCAPTCHA
+   - Enterprise (cloud): Cloudflare Turnstile reCAPTCHA
+   - Auto-detection: Use existing feature flag system (isFeatureEnabled('advancedSecurity'))
+
+Complete Authentication UX Specification — Confirmed
+
+1. Email Verification Flow
+   - Unverified Login Attempt: Close login → Open notification dialog
+   - Message: "Please verify your email [email] to log in"
+   - Buttons: [Resend] (with "didn't receive it?" text) + [Change Email] (shows input)
+
+2. Session & State Management
+   - Session Expiry: Industry standard (Better Auth default with auto-refresh)
+   - Multi-tab Sync: BroadcastChannel API for cross-tab authentication state
+   - Remember Me: Use Better Auth defaults
+
+3. Form Enhancements
+   - Password Strength: Real-time visual indicator during signup
+   - Email Validation: Real-time with visual feedback
+   - Loading States: "Signing in...", "Creating account...", "Sending verification..."
+   - Auto-focus: Email field when modal opens
+
+4. Signup Flow — Dual Deployment
+   - Enterprise (Cloud):
+     - Fields: Email, Password, Confirm Password, Social Login
+     - Plan Selection: Free vs Pro pricing cards
+     - Free Plan: → Success page → Email confirmation (Resend)
+     - Pro Plan: → Stripe payment page
+     - Terms Checkbox: Required
+   - Open Source:
+     - Same fields, NO pricing plans
+     - Email confirmation via Nodemailer
+
+5. Success & Redirect Flow
+   - Login: Brief success → Auto-redirect to dashboard
+   - Signup: Success page with email confirmation message
+   - Dashboard Header: User click → Dropdown [Dashboard][Settings][Logout]
+
+6. Mobile & Technical
+   - Mobile: Full-screen modals on mobile devices
+   - Touch Targets: Proper sizing for social login buttons
+   - Keyboard Navigation: Proper tab order
+   - Screen Reader: Skip for MVP (growth stage feature)
+
+7. Development Recommendations
+   - OAuth Redirects: Environment-based configuration (localhost vs production domains)
+   - Testing: Mock OAuth in development, test email with Nodemailer
+   - Error Logging: Authentication attempts, failures, verification events
+   - JavaScript Fallback: Graceful degradation to /login /signup pages if JS disabled
+
+8. Error Handling
+   - Social Login Errors: Generic "Login failed, please try again"
+   - Form Validation: Real-time with clear error messages
+   - Recovery: Clear retry paths for all failure scenarios
+
+Implementation Priority
+1. Dashboard Style Analysis → DialogManager → Basic Auth Modals
+2. Email Verification Flow → Plan Selection (Enterprise) → Success Pages
+3. Mobile Optimization → Cross-tab Sync → Password Strength
+4. Testing & Polish → Error States → Performance
+
+Recommendations (Additions)
+
+- Security hardening
+  - CSRF on form endpoints; secure, HTTPOnly, SameSite cookies; rotate refresh tokens; invalidate on logout
+  - Brute-force defense: rate-limit login/signup/verify/resend; progressive backoff; temporary account lock after repeated failures
+  - Account enumeration: generic errors on login/forgot; don’t reveal if email exists
+  - Email verification tokens: short expiry, single-use, device/IP capture, resend throttle
+  - OAuth: enforce state and PKCE; strict allowed redirect URIs; link accounts by email
+
+- Password & validation
+  - Use zxcvbn for strength meter; optional Have I Been Pwned k-anonymity breach check at signup
+
+- Deliverability
+  - Configure SPF/DKIM/DMARC; handle bounces; background email queue with retries
+
+- Session management
+  - Multi-tab sync via BroadcastChannel with localStorage fallback; token rotation; device/session list with revoke
+
+- Accessibility & UX
+  - Radix dialogs: focus trap, ESC/overlay close, ARIA roles/labels; ensure /login and /signup fallback pages exist
+
+- Enterprise specifics
+  - ToS/Privacy consent versioning with timestamp; Stripe webhooks for checkout completion; idempotency keys
+
+- Observability
+  - Centralized error codes; structured logs for auth events; capture key funnel analytics
+
+- Edge cases
+  - Social login when provider returns unverified email → require verification
+  - Email change flow requires re-verification and session re-auth

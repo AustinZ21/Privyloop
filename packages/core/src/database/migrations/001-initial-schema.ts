@@ -138,6 +138,47 @@ export const migration001: Migration = {
       );
     `);
 
+    // Create Better Auth tables
+    await db.execute(sql`
+      CREATE TABLE sessions (
+        id TEXT PRIMARY KEY,
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        expires_at TIMESTAMP NOT NULL,
+        token TEXT NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+
+    await db.execute(sql`
+      CREATE TABLE accounts (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        account_id TEXT NOT NULL,
+        provider TEXT NOT NULL,
+        provider_account_id TEXT NOT NULL,
+        refresh_token TEXT,
+        access_token TEXT,
+        expires_at TIMESTAMP,
+        token_type TEXT,
+        scope TEXT,
+        id_token TEXT,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        UNIQUE(provider, provider_account_id)
+      );
+    `);
+
+    await db.execute(sql`
+      CREATE TABLE verification_tokens (
+        identifier TEXT NOT NULL,
+        token TEXT NOT NULL,
+        expires_at TIMESTAMP NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (identifier, token)
+      );
+    `);
+
     // Create audit_logs table
     await db.execute(sql`
       CREATE TABLE audit_logs (
@@ -187,6 +228,16 @@ export const migration001: Migration = {
       CREATE INDEX privacy_snapshots_retention_idx ON privacy_snapshots(expires_at);
     `);
 
+    // Better Auth indexes
+    await db.execute(sql`
+      CREATE INDEX sessions_user_id_idx ON sessions(user_id);
+      CREATE INDEX sessions_expires_at_idx ON sessions(expires_at);
+      CREATE INDEX sessions_token_idx ON sessions(token);
+      CREATE INDEX accounts_user_id_idx ON accounts(user_id);
+      CREATE INDEX accounts_provider_idx ON accounts(provider, provider_account_id);
+      CREATE INDEX verification_tokens_expires_at_idx ON verification_tokens(expires_at);
+    `);
+
     // Audit logs indexes
     await db.execute(sql`
       CREATE INDEX audit_logs_event_type_idx ON audit_logs(event_type, created_at);
@@ -203,6 +254,9 @@ export const migration001: Migration = {
   down: async (db: Database) => {
     // Drop tables in reverse order (due to foreign key constraints)
     await db.execute(sql`DROP TABLE IF EXISTS audit_logs CASCADE;`);
+    await db.execute(sql`DROP TABLE IF EXISTS verification_tokens CASCADE;`);
+    await db.execute(sql`DROP TABLE IF EXISTS accounts CASCADE;`);
+    await db.execute(sql`DROP TABLE IF EXISTS sessions CASCADE;`);
     await db.execute(sql`DROP TABLE IF EXISTS privacy_snapshots CASCADE;`);
     await db.execute(sql`DROP TABLE IF EXISTS user_platform_connections CASCADE;`);
     await db.execute(sql`DROP TABLE IF EXISTS privacy_templates CASCADE;`);
