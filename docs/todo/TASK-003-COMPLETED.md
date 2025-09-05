@@ -147,14 +147,14 @@ MICROSOFT_CLIENT_ID=your-microsoft-client-id
 ### Cloud Deployment Template (.env.cloud.example)
 ```bash
 DEPLOYMENT_MODE=cloud
-DATABASE_URL=postgresql://postgres:password@db.supabase.co:5432/postgres
-BETTER_AUTH_SECRET=your-production-secret-key
+DATABASE_URL=postgresql://postgres:[password]@db.[supabase-id].supabase.co:5432/postgres
+BETTER_AUTH_SECRET=[your-production-secret-key]
 AUTH_URL=https://app.privyloop.com
 
 # Managed Services
-RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxxxxx
-REDIS_URL=redis://default:password@redis-hostname:6379
-STRIPE_SECRET_KEY=sk_live_xxxxxxxxxxxxxxxxxxxxxxxx
+RESEND_API_KEY=re_[your-resend-api-key]
+REDIS_URL=redis://default:[password]@[redis-hostname]:6379
+STRIPE_SECRET_KEY=sk_live_[your-stripe-secret-key]
 ```
 
 ### Next.js Configuration (.env.local.example)
