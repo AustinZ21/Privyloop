@@ -19,7 +19,7 @@ export type DatabaseConfig = z.infer<typeof configSchema>;
  * Database configuration with environment variable support
  */
 export const config: DatabaseConfig = configSchema.parse({
-  databaseUrl: process.env.DATABASE_URL || 'postgresql://postgres:password@localhost:5432/privyloop',
+  databaseUrl: process.env.DATABASE_URL || 'postgresql://postgres:password@localhost:5432/privyloop', // DEV ONLY - do not use in production
   deploymentType: (process.env.DEPLOYMENT_TYPE as 'self-hosted' | 'cloud') || 'self-hosted',
   maxConnections: process.env.DB_MAX_CONNECTIONS ? parseInt(process.env.DB_MAX_CONNECTIONS) : 10,
   idleTimeoutMs: process.env.DB_IDLE_TIMEOUT_MS ? parseInt(process.env.DB_IDLE_TIMEOUT_MS) : 30000,

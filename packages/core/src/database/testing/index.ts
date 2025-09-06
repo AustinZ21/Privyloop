@@ -22,6 +22,7 @@ import {
  */
 export const createTestUser = async (db: Database, overrides?: Partial<NewUser>) => {
   const testUser: NewUser = {
+    id: `user_${Math.random().toString(36).substring(2)}`, // Generate unique ID
     email: 'test@example.com',
     emailVerified: true,
     subscriptionTier: 'free',

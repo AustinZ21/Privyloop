@@ -17,7 +17,7 @@ export const auditLogs = pgTable('audit_logs', {
   eventCategory: varchar('event_category', { length: 30 }).notNull(),
   
   // Context
-  userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+  userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
   platformId: uuid('platform_id').references(() => platforms.id, { onDelete: 'set null' }),
   
   // Event details

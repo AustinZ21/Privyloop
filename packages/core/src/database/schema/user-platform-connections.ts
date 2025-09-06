@@ -13,7 +13,7 @@ export const userPlatformConnections = pgTable('user_platform_connections', {
   id: uuid('id').primaryKey().defaultRandom(),
   
   // Relationships
-  userId: uuid('user_id')
+  userId: text('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
   platformId: uuid('platform_id')

@@ -3,16 +3,18 @@
  * Handles authentication, subscription tiers, and user preferences
  */
 
-import { pgTable, uuid, varchar, timestamp, text, jsonb, boolean, integer } from 'drizzle-orm/pg-core';
+import { pgTable, varchar, timestamp, text, jsonb, boolean, integer } from 'drizzle-orm/pg-core';
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
 
 export const users = pgTable('users', {
-  id: uuid('id').primaryKey().defaultRandom(),
+  id: text('id').primaryKey(), // Changed from uuid to text for Better Auth compatibility
+  name: text('name'), // Added for Better Auth (optional field)
   email: varchar('email', { length: 255 }).notNull().unique(),
   
-  // Authentication fields
+  // Authentication fields (Better Auth compatible)
   emailVerified: boolean('email_verified').default(false).notNull(),
+  image: text('image'), // Added for Better Auth profile images
   passwordHash: varchar('password_hash', { length: 255 }),
   
   // OAuth provider data
@@ -69,7 +71,10 @@ export const users = pgTable('users', {
 
 // Zod schemas for validation
 export const insertUserSchema = createInsertSchema(users, {
+  id: z.string().min(1), // Better Auth uses text IDs
+  name: z.string().optional(),
   email: z.string().email('Invalid email address'),
+  image: z.string().url().optional(),
   subscriptionTier: z.enum(['free', 'pro', 'premium', 'enterprise']),
   subscriptionStatus: z.enum(['active', 'cancelled', 'past_due', 'unpaid']),
 

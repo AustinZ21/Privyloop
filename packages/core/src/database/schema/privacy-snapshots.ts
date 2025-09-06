@@ -15,7 +15,7 @@ export const privacySnapshots = pgTable('privacy_snapshots', {
   id: uuid('id').primaryKey().defaultRandom(),
   
   // Relationships
-  userId: uuid('user_id')
+  userId: text('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
   platformId: uuid('platform_id')

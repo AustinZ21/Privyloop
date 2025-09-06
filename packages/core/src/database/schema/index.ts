@@ -10,6 +10,7 @@ export * from './privacy-templates';
 export * from './privacy-snapshots';
 export * from './user-platform-connections';
 export * from './audit-logs';
+export * from './auth-tables';
 
 // Schema relations
 import { relations } from 'drizzle-orm';
@@ -19,12 +20,16 @@ import { privacyTemplates } from './privacy-templates';
 import { privacySnapshots } from './privacy-snapshots';
 import { userPlatformConnections } from './user-platform-connections';
 import { auditLogs } from './audit-logs';
+import { session, account, verification } from './auth-tables';
 
 // Define relationships between tables
 export const usersRelations = relations(users, ({ many }) => ({
   platformConnections: many(userPlatformConnections),
   privacySnapshots: many(privacySnapshots),
   auditLogs: many(auditLogs),
+  // Better Auth relations
+  sessions: many(session),
+  accounts: many(account),
 }));
 
 export const platformsRelations = relations(platforms, ({ many }) => ({
@@ -83,20 +88,42 @@ export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
   }),
 }));
 
+// Better Auth table relations
+export const sessionRelations = relations(session, ({ one }) => ({
+  user: one(users, {
+    fields: [session.userId],
+    references: [users.id],
+  }),
+}));
+
+export const accountRelations = relations(account, ({ one }) => ({
+  user: one(users, {
+    fields: [account.userId],
+    references: [users.id],
+  }),
+}));
+
 // Database schema object for Drizzle
 export const schema = {
-  users,
+  users, // Consolidated user table (replaces separate 'user' table)
   platforms,
   privacyTemplates,
   privacySnapshots,
   userPlatformConnections,
   auditLogs,
+  // Better Auth tables (using consolidated users table)
+  session,
+  account,
+  verification,
   usersRelations,
   platformsRelations,
   privacyTemplatesRelations,
   privacySnapshotsRelations,
   userPlatformConnectionsRelations,
   auditLogsRelations,
+  // Better Auth relations
+  sessionRelations,
+  accountRelations,
 } as const;
 
 // Type-safe schema type
