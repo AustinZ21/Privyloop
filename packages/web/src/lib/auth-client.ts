@@ -8,9 +8,26 @@ import { createAuthClient } from "better-auth/react";
 import type { Session } from "@privyloop/core/auth";
 import { getFeatureFlags, getAuthFeatureFlags } from "@privyloop/core/features";
 
+function computeBaseURL(): string {
+  // Browser: use same-origin to keep cookies/sessions working
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
+  }
+  // SSR: prefer explicit env, else platform-provided URL
+  const fromEnv =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.NEXT_PUBLIC_AUTH_URL ||
+    process.env.APP_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined);
+
+  if (fromEnv) return fromEnv;
+  if (process.env.NODE_ENV !== 'production') return 'http://localhost:3030';
+  throw new Error('authClient baseURL is missing in production. Set NEXT_PUBLIC_APP_URL.');
+}
+
 // Create Better Auth client
 export const authClient = createAuthClient({
-  baseURL: process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3000",
+  baseURL: computeBaseURL(),
 });
 
 // Export auth hooks and utilities from Better Auth
