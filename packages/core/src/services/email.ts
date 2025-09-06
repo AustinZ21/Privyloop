@@ -4,6 +4,7 @@
  */
 
 import nodemailer from 'nodemailer';
+import { logAuth, maskEmail } from '../utils/logging';
 
 interface EmailConfig {
   deployment: 'self-hosted' | 'enterprise';
@@ -92,7 +93,7 @@ class EmailService {
         return await this.sendWithNodemailer(data);
       }
     } catch (error) {
-      console.error('Email sending failed:', error);
+      console.error('Email sending failed:', error instanceof Error ? error.message : 'Unknown error');
       return false;
     }
   }
@@ -121,10 +122,8 @@ class EmailService {
       return await this.sendWithNodemailer(data);
     }
     
-    console.log('Enterprise email sending not yet implemented, logging email:');
-    console.log(`To: ${data.to}`);
+    console.log('Enterprise email sending not yet implemented - email would be sent to:', maskEmail(data.to));
     console.log(`Subject: ${data.subject}`);
-    console.log(`Body: ${data.text || this.stripHtml(data.html)}`);
     return true;
   }
 
@@ -132,15 +131,38 @@ class EmailService {
     return html.replace(/<[^>]*>/g, '');
   }
 
-  async sendVerificationEmail(email: string, verificationUrl: string): Promise<boolean> {
+  async sendVerificationEmail(email: string, verificationUrl: string, correlationId?: string): Promise<boolean> {
     const subject = 'Verify your PrivyLoop account';
     const html = this.getVerificationEmailTemplate(verificationUrl);
     
-    return await this.sendEmail({
+    logAuth({
+      action: 'email_service_send',
+      email,
+      correlationId,
+      metadata: {
+        subject,
+        deployment: this.config.deployment,
+        hasTransporter: !!this.transporter
+      }
+    });
+    
+    const success = await this.sendEmail({
       to: email,
       subject,
       html,
     });
+    
+    logAuth({
+      action: 'email_service_result',
+      email,
+      correlationId,
+      success,
+      metadata: {
+        deployment: this.config.deployment
+      }
+    });
+    
+    return success;
   }
 
   private getVerificationEmailTemplate(verificationUrl: string): string {

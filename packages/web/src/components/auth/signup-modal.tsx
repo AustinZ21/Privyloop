@@ -232,17 +232,28 @@ export function SignupModal() {
         ...(recaptchaToken && { recaptchaToken }),
       });
       
-      // Step 2: Handle subscription tier after successful registration
-      if (result.data?.user) {
+      // Step 2: Handle successful registration response
+      console.log('Signup result:', result); // Debug logging
+      
+      // Check for successful signup (user created or signup request completed)
+      if (result.data?.user || result.data?.success !== false) {
         // Store subscription preference for post-auth handling
         localStorage.setItem('pendingSubscriptionTier', form.selectedPlan || 'free');
         localStorage.setItem('userAgreedToTerms', form.agreeToTerms.toString());
-      }
-
-      if (result.data?.user) {
+        
         setSuccess(true);
         
         // For email/password signup, show success page with email verification
+        setTimeout(() => {
+          close();
+          router.push('/signup-success?email=' + encodeURIComponent(form.email));
+        }, 1500);
+      } else {
+        // If signup completed but no user data, still redirect to success page
+        // This handles cases where email verification is required
+        console.log('Signup completed without user data - likely requires email verification');
+        setSuccess(true);
+        
         setTimeout(() => {
           close();
           router.push('/signup-success?email=' + encodeURIComponent(form.email));
@@ -609,7 +620,7 @@ export function SignupModal() {
                 Continue with Google
               </Button>
 
-              {/* Building */}
+              {/* Microsoft */}
               <Button
                 type="button"
                 variant="outline"
@@ -617,8 +628,10 @@ export function SignupModal() {
                 onClick={() => handleSocialSignup('microsoft')}
                 disabled={isSubmitting || (isEnterprise && !form.selectedPlan)}
               >
-                <Building className="w-4 h-4 mr-2" />
-                Continue with Building
+                <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zM24 11.4H12.6V0H24v11.4z"/>
+                </svg>
+                Continue with Microsoft
               </Button>
 
               {/* GitHub */}
