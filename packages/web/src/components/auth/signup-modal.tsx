@@ -235,8 +235,8 @@ export function SignupModal() {
       // Step 2: Handle successful registration response
       console.log('Signup result:', result); // Debug logging
       
-      // Check for successful signup (user created or signup request completed)
-      if (result.data?.user || result.data?.success !== false) {
+      // Check for successful signup (user created)
+      if (result.data?.user) {
         // Store subscription preference for post-auth handling
         localStorage.setItem('pendingSubscriptionTier', form.selectedPlan || 'free');
         localStorage.setItem('userAgreedToTerms', form.agreeToTerms.toString());

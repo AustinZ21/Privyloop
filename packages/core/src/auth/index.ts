@@ -51,10 +51,8 @@ export function createAuth(env: AuthEnvVars = {}) {
           clientId: env.GOOGLE_CLIENT_ID,
           clientSecret: env.GOOGLE_CLIENT_SECRET,
           // Force consent prompt for security - ensures users see OAuth permissions
-          extraParams: {
-            prompt: "consent",
-            access_type: "offline"
-          }
+          accessType: "offline",
+          prompt: "consent"
         }
       } : {}),
       ...(env.MICROSOFT_CLIENT_ID && env.MICROSOFT_CLIENT_SECRET ? {
