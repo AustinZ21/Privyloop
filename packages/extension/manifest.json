@@ -1,28 +1,95 @@
 {
   "manifest_version": 3,
-  "name": "PrivyLoop",
-  "version": "0.1.0",
-  "description": "Track and manage privacy policy changes across platforms",
-  "permissions": [
-    "activeTab",
-    "storage"
-  ],
-  "background": {
-    "service_worker": "dist/background.js"
-  },
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["dist/content.js"]
-    }
-  ],
-  "action": {
-    "default_popup": "popup.html",
-    "default_title": "PrivyLoop"
-  },
+  "name": "PrivyLoop Privacy Scanner",
+  "version": "1.0.0",
+  "description": "Automatically scan and analyze privacy settings across major platforms with 95% storage optimization",
+  
   "icons": {
     "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
+  },
+
+  "background": {
+    "service_worker": "background/service-worker.js",
+    "type": "module"
+  },
+
+  "content_scripts": [
+    {
+      "matches": [
+        "*://myaccount.google.com/*",
+        "*://adssettings.google.com/*",
+        "*://myactivity.google.com/*"
+      ],
+      "js": ["content/privacy-scanner.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "*://www.facebook.com/*",
+        "*://facebook.com/*"
+      ],
+      "js": ["content/privacy-scanner.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "*://www.linkedin.com/*",
+        "*://linkedin.com/*"
+      ],
+      "js": ["content/privacy-scanner.js"],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+
+  "optional_permissions": [
+    "*://myaccount.google.com/*",
+    "*://adssettings.google.com/*",
+    "*://myactivity.google.com/*",
+    "*://takeout.google.com/*",
+    "*://www.facebook.com/*",
+    "*://facebook.com/*",
+    "*://m.facebook.com/*",
+    "*://www.linkedin.com/*",
+    "*://linkedin.com/*",
+    "*://platform.openai.com/*",
+    "*://chat.openai.com/*"
+  ],
+
+  "host_permissions": [
+    "http://localhost:3000/*",
+    "https://api.privyloop.com/*"
+  ],
+
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "PrivyLoop Privacy Scanner"
+  },
+
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  },
+
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "content/injected-script.js",
+        "icons/*"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ],
+
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' http://localhost:3000 https://api.privyloop.com"
   }
 }
