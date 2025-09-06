@@ -4,7 +4,8 @@
       "Read(/C:\\Users\\austi\\Github\\Production\\Privyloop\\.claude\\epics\\privyloop/**)",
       "Read(/C:\\Users\\austi\\Github\\Production\\Privyloop\\.claude\\epics\\privyloop/**)",
       "Read(/C:\\Users\\austi\\Github\\Production\\Privyloop\\packages/**)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(openssl rand:*)"
     ],
     "deny": [],
     "ask": []
