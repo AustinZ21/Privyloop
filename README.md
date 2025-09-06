@@ -1,490 +1,338 @@
-# Claude Code PM
+# PrivyLoop
 
-[![Automaze](https://img.shields.io/badge/By-automaze.io-4b3baf)](https://automaze.io)
-&nbsp;
-[![Claude Code](https://img.shields.io/badge/+-Claude%20Code-d97757)](https://github.com/automazeio/ccpm/blob/main/README.md)
-[![GitHub Issues](https://img.shields.io/badge/+-GitHub%20Issues-1f2328)](https://github.com/automazeio/ccpm)
-&nbsp;
-[![MIT License](https://img.shields.io/badge/License-MIT-28a745)](https://github.com/automazeio/ccpm/blob/main/LICENSE)
-&nbsp;
-[![Follow on 𝕏](https://img.shields.io/badge/𝕏-@aroussi-1c9bf0)](http://x.com/intent/follow?screen_name=aroussi)
-&nbsp;
-[![Star this repo](https://img.shields.io/badge/★-Star%20this%20repo-e7b10b)](https://github.com/automazeio/ccpm)
+[![License: BSL-1.1](https://img.shields.io/badge/License-BSL--1.1-blue.svg)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-15-black.svg)](https://nextjs.org/)
+[![Better Auth](https://img.shields.io/badge/Better%20Auth-1.3.8-green.svg)](https://better-auth.com/)
 
-### Claude Code workflow to ship ~~faster~~ _better_ using spec-driven development, GitHub issues, Git worktrees, and mutiple AI agents running in parallel.
+> Privacy-focused platform for tracking and managing corporate privacy policy changes across multiple platforms.
 
-Stop losing context. Stop blocking on tasks. Stop shipping bugs. This battle-tested system turns PRDs into epics, epics into GitHub issues, and issues into production code – with full traceability at every step.
+PrivyLoop empowers users to understand and control their digital privacy through automated monitoring and plain-English insights. Available as both **open-source self-hosted** and **managed cloud service** deployments.
 
-![Claude Code PM](screenshot.webp)
+## 🎯 Key Features
 
-## Table of Contents
+- **🔍 Automated Privacy Monitoring**: Background scanning eliminates manual privacy auditing
+- **📝 Plain-English Insights**: AI-powered explanations make complex settings understandable  
+- **🔔 Change Detection**: Real-time alerts when privacy settings are modified
+- **🔗 Direct Action Links**: One-click access to modify settings on original platforms
+- **🌐 Multi-Platform Support**: Google, Facebook, LinkedIn, OpenAI, Claude, and more
+- **🏠 Dual Deployment**: Choose between self-hosted control or managed convenience
 
-- [Background](#background)
-- [The Workflow](#the-workflow)
-- [What Makes This Different?](#what-makes-this-different)
-- [Why GitHub Issues?](#why-github-issues)
-- [Core Principle: No Vibe Coding](#core-principle-no-vibe-coding)
-- [System Architecture](#system-architecture)
-- [Workflow Phases](#workflow-phases)
-- [Command Reference](#command-reference)
-- [The Parallel Execution System](#the-parallel-execution-system)
-- [Key Features & Benefits](#key-features--benefits)
-- [Proven Results](#proven-results)
-- [Example Flow](#example-flow)
-- [Get Started Now](#get-started-now)
-- [Local vs Remote](#local-vs-remote)
-- [Technical Notes](#technical-notes)
-- [Support This Project](#support-this-project)
+## 🚀 Quick Start
 
-## Background
+### Prerequisites
 
-Every team struggles with the same problems:
-- **Context evaporates** between sessions, forcing constant re-discovery
-- **Parallel work creates conflicts** when multiple developers touch the same code
-- **Requirements drift** as verbal decisions override written specs
-- **Progress becomes invisible** until the very end
+- Node.js 18+
+- pnpm (v9+ recommended)
+- Docker Desktop (for local PostgreSQL)
+- Git
 
-This system solves all of that.
-
-## The Workflow
-
-```mermaid
-graph LR
-    A[PRD Creation] --> B[Epic Planning]
-    B --> C[Task Decomposition]
-    C --> D[GitHub Sync]
-    D --> E[Parallel Execution]
-```
-
-### See It In Action (60 seconds)
+### 1. Clone and Install
 
 ```bash
-# Create a comprehensive PRD through guided brainstorming
-/pm:prd-new memory-system
-
-# Transform PRD into a technical epic with task breakdown
-/pm:prd-parse memory-system
-
-# Push to GitHub and start parallel execution
-/pm:epic-oneshot memory-system
-/pm:issue-start 1235
+git clone https://github.com/your-org/privyloop.git
+cd privyloop
+pnpm install
 ```
 
-## What Makes This Different?
+### 2. Database Setup with Docker
 
-| Traditional Development | Claude Code PM System |
-|------------------------|----------------------|
-| Context lost between sessions | **Persistent context** across all work |
-| Serial task execution | **Parallel agents** on independent tasks |
-| "Vibe coding" from memory | **Spec-driven** with full traceability |
-| Progress hidden in branches | **Transparent audit trail** in GitHub |
-| Manual task coordination | **Intelligent prioritization** with `/pm:next` |
-
-## Why GitHub Issues?
-
-Most Claude Code workflows operate in isolation – a single developer working with AI in their local environment. This creates a fundamental problem: **AI-assisted development becomes a silo**.
-
-By using GitHub Issues as our database, we unlock something powerful:
-
-### 🤝 **True Team Collaboration**
-- Multiple Claude instances can work on the same project simultaneously
-- Human developers see AI progress in real-time through issue comments
-- Team members can jump in anywhere – the context is always visible
-- Managers get transparency without interrupting flow
-
-### 🔄 **Seamless Human-AI Handoffs**
-- AI can start a task, human can finish it (or vice versa)
-- Progress updates are visible to everyone, not trapped in chat logs
-- Code reviews happen naturally through PR comments
-- No "what did the AI do?" meetings
-
-### 📈 **Scalable Beyond Solo Work**
-- Add team members without onboarding friction
-- Multiple AI agents working in parallel on different issues
-- Distributed teams stay synchronized automatically
-- Works with existing GitHub workflows and tools
-
-### 🎯 **Single Source of Truth**
-- No separate databases or project management tools
-- Issue state is the project state
-- Comments are the audit trail
-- Labels provide organization
-
-This isn't just a project management system – it's a **collaboration protocol** that lets humans and AI agents work together at scale, using infrastructure your team already trusts.
-
-## Core Principle: No Vibe Coding
-
-> **Every line of code must trace back to a specification.**
-
-We follow a strict 5-phase discipline:
-
-1. **🧠 Brainstorm** - Think deeper than comfortable
-2. **📝 Document** - Write specs that leave nothing to interpretation
-3. **📐 Plan** - Architect with explicit technical decisions
-4. **⚡ Execute** - Build exactly what was specified
-5. **📊 Track** - Maintain transparent progress at every step
-
-No shortcuts. No assumptions. No regrets.
-
-## System Architecture
-
-```
-.claude/
-├── CLAUDE.md          # Always-on instructions (copy content to your project's CLAUDE.md file)
-├── agents/            # Task-oriented agents (for context preservation)
-├── commands/          # Command definitions
-│   ├── context/       # Create, update, and prime context
-│   ├── pm/            # ← Project management commands (this system)
-│   └── testing/       # Prime and execute tests (edit this)
-├── context/           # Project-wide context files
-├── epics/             # ← PM's local workspace (place in .gitignore)
-│   └── [epic-name]/   # Epic and related tasks
-│       ├── epic.md    # Implementation plan
-│       ├── [#].md     # Individual task files
-│       └── updates/   # Work-in-progress updates
-├── prds/              # ← PM's PRD files
-├── rules/             # Place any rule files you'd like to reference here
-└── scripts/           # Place any script files you'd like to use here
-```
-
-## Workflow Phases
-
-### 1. Product Planning Phase
+PrivyLoop uses PostgreSQL with a simple Docker setup:
 
 ```bash
-/pm:prd-new feature-name
+# Start PostgreSQL container
+docker compose -f docker-compose.dev.yml up -d
+
+# Verify container is running
+docker ps
 ```
-Launches comprehensive brainstorming to create a Product Requirements Document capturing vision, user stories, success criteria, and constraints.
 
-**Output:** `.claude/prds/feature-name.md`
+**What this creates:**
+- PostgreSQL 15 database named `privyloop`
+- Default credentials: `postgres:password`
+- Available on `localhost:5432`
+- Persistent data storage in Docker volume
 
-### 2. Implementation Planning Phase
+> ⚠️ **WARNING**: The above credentials are for local development only. Do not reuse in staging or production. Use strong, unique secrets per environment.
+
+### 3. Initialize Database Schema
 
 ```bash
-/pm:prd-parse feature-name
+cd packages/core
+pnpm db:push
 ```
-Transforms PRD into a technical implementation plan with architectural decisions, technical approach, and dependency mapping.
 
-**Output:** `.claude/epics/feature-name/epic.md`
+This creates all necessary tables:
+- ✅ User management and authentication
+- ✅ Platform configurations and templates
+- ✅ Privacy snapshot tracking and history
+- ✅ Audit logging and compliance
 
-### 3. Task Decomposition Phase
+### 4. Environment Configuration
+
+**⚠️ Important: Monorepo Setup**
+
+This project has a monorepo structure. You need to configure environment variables in two places:
 
 ```bash
-/pm:epic-decompose feature-name
+# 1. Root environment (core package, database)
+cp .env.local.example .env.local
+
+# 2. Web package environment (Next.js app, OAuth)
+cp packages/web/.env.local.example packages/web/.env.local
 ```
-Breaks epic into concrete, actionable tasks with acceptance criteria, effort estimates, and parallelization flags.
 
-**Output:** `.claude/epics/feature-name/[task].md`
+**Configure root `.env.local`:**
+```bash
+# Database (using Docker setup)
+DATABASE_URL=postgresql://postgres:password@localhost:5432/privyloop
 
-### 4. GitHub Synchronization
+# Authentication secret (generate with: openssl rand -base64 32)
+BETTER_AUTH_SECRET=your-super-secret-key-here-minimum-32-characters
+
+# Application URL
+AUTH_URL=http://localhost:3030
+```
+
+**Configure `packages/web/.env.local` for OAuth and web app:**
+```bash
+# Copy your auth secret from root
+BETTER_AUTH_SECRET=your-super-secret-key-here-minimum-32-characters
+
+# OAuth providers (for social login)
+GITHUB_CLIENT_ID=your-github-client-id
+GITHUB_CLIENT_SECRET=your-github-client-secret
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+
+# Next.js public variables
+NEXT_PUBLIC_APP_URL=http://localhost:3030
+NEXT_PUBLIC_DEPLOYMENT_MODE=self-hosted
+```
+
+### 5. Start Development
 
 ```bash
-/pm:epic-sync feature-name
-# Or for confident workflows:
-/pm:epic-oneshot feature-name
+pnpm dev
 ```
-Pushes epic and tasks to GitHub as issues with appropriate labels and relationships.
 
-### 5. Execution Phase
+Visit `http://localhost:3030` to access PrivyLoop!
+
+## 🏗️ Project Architecture
+
+### Monorepo Structure
+
+```
+packages/
+├── core/              # Shared utilities, database, authentication
+│   ├── src/auth/      # Better Auth configuration
+│   ├── src/database/  # Drizzle ORM schemas and migrations
+│   ├── src/services/  # Email, AI analysis, platform scraping
+│   └── src/features/  # Feature flag system
+├── web/               # Next.js 15 web application
+│   ├── src/app/       # App Router pages and API routes
+│   ├── src/components/# UI components (shadcn/ui)
+│   └── src/lib/       # Client-side utilities
+└── extension/         # Browser extension (future)
+```
+
+### Technology Stack
+
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| **Framework** | Next.js 15 | Full-stack React with App Router |
+| **Database** | PostgreSQL 15 | Primary data storage |
+| **ORM** | Drizzle ORM | Type-safe database operations |
+| **Authentication** | Better Auth 1.3.8 | Multi-provider auth system |
+| **UI Framework** | React 18 + shadcn/ui | Modern component library |
+| **Styling** | Tailwind CSS | Utility-first CSS |
+| **Validation** | Zod | Schema validation |
+| **AI Integration** | Google Gemini API | Privacy analysis |
+| **Email** | Nodemailer | SMTP email delivery |
+
+## 🎛️ Dual Deployment Model
+
+### Self-Hosted (Open Source)
+- ✅ **Unlimited Features**: Full access to all core capabilities
+- ✅ **No Usage Limits**: Unlimited privacy cards and scans
+- ✅ **Your Infrastructure**: Complete control over data and hosting
+- ✅ **User-Provided APIs**: Bring your own Gemini, SMTP credentials
+- ✅ **Community Driven**: Open source with community contributions
+
+### Cloud Service (Managed)
+- ✅ **Managed Infrastructure**: No server maintenance required
+- ✅ **Tiered Pricing**: Free (3 cards), Pro ($4.99/mo), Premium ($7.80/mo)
+- ✅ **Integrated Services**: Built-in AI, email, and storage
+- ✅ **Advanced Analytics**: Usage trends and insights
+- ✅ **Professional Support**: Dedicated customer support
+
+## 🔐 Authentication System
+
+PrivyLoop uses Better Auth for comprehensive security:
+
+**Features:**
+- Multi-provider OAuth (GitHub, Google, Microsoft)
+- Email/password with verification
+- Secure session management (7-day sessions, 24-hour refresh)
+- CSRF protection and rate limiting
+- Complete audit logging
+
+**Testing Authentication:**
+1. Start the dev server (`npm run dev`)
+2. Create account at `http://localhost:3030`
+3. Verify email (check console for verification link)
+4. Test social login (if OAuth configured)
+
+## 📊 Database Management
+
+### Common Operations
 
 ```bash
-/pm:issue-start 1234  # Launch specialized agent
-/pm:issue-sync 1234   # Push progress updates
-/pm:next             # Get next priority task
+# View all tables
+docker compose -f docker-compose.dev.yml exec -T postgres psql -U postgres -d privyloop -c "\dt"
+
+# Connect to database directly
+docker compose -f docker-compose.dev.yml exec postgres psql -U postgres -d privyloop
+
+# Reset database (removes all data)
+docker compose -f docker-compose.dev.yml down -v
+docker compose -f docker-compose.dev.yml up -d
+cd packages/core && pnpm db:push
+
+# Stop database
+docker compose -f docker-compose.dev.yml down
 ```
-Specialized agents implement tasks while maintaining progress updates and an audit trail.
 
-## Command Reference
+### Schema Overview
 
-> [!TIP]
-> Type `/pm:help` for a concise command summary
+**Core Tables:**
+- `users` - Authentication, subscriptions, preferences
+- `platforms` - Supported services (Google, Facebook, etc.)
+- `privacy_templates` - Structured privacy settings schemas  
+- `privacy_snapshots` - Historical tracking of user privacy settings
+- `user_platform_connections` - User-specific platform integrations
+- `audit_logs` - Complete activity tracking
 
-### Initial Setup
-- `/pm:init` - Install dependencies and configure GitHub
+*Better Auth tables (`sessions`, `accounts`, `verification_tokens`) are created automatically.*
 
-### PRD Commands
-- `/pm:prd-new` - Launch brainstorming for new product requirement
-- `/pm:prd-parse` - Convert PRD to implementation epic
-- `/pm:prd-list` - List all PRDs
-- `/pm:prd-edit` - Edit existing PRD
-- `/pm:prd-status` - Show PRD implementation status
+## 🛠️ Development Workflow
 
-### Epic Commands
-- `/pm:epic-decompose` - Break epic into task files
-- `/pm:epic-sync` - Push epic and tasks to GitHub
-- `/pm:epic-oneshot` - Decompose and sync in one command
-- `/pm:epic-list` - List all epics
-- `/pm:epic-show` - Display epic and its tasks
-- `/pm:epic-close` - Mark epic as complete
-- `/pm:epic-edit` - Edit epic details
-- `/pm:epic-refresh` - Update epic progress from tasks
-
-### Issue Commands
-- `/pm:issue-show` - Display issue and sub-issues
-- `/pm:issue-status` - Check issue status
-- `/pm:issue-start` - Begin work with specialized agent
-- `/pm:issue-sync` - Push updates to GitHub
-- `/pm:issue-close` - Mark issue as complete
-- `/pm:issue-reopen` - Reopen closed issue
-- `/pm:issue-edit` - Edit issue details
-
-### Workflow Commands
-- `/pm:next` - Show next priority issue with epic context
-- `/pm:status` - Overall project dashboard
-- `/pm:standup` - Daily standup report
-- `/pm:blocked` - Show blocked tasks
-- `/pm:in-progress` - List work in progress
-
-### Sync Commands
-- `/pm:sync` - Full bidirectional sync with GitHub
-- `/pm:import` - Import existing GitHub issues
-
-### Maintenance Commands
-- `/pm:validate` - Check system integrity
-- `/pm:clean` - Archive completed work
-- `/pm:search` - Search across all content
-
-## The Parallel Execution System
-
-### Issues Aren't Atomic
-
-Traditional thinking: One issue = One developer = One task
-
-**Reality: One issue = Multiple parallel work streams**
-
-A single "Implement user authentication" issue isn't one task. It's...
-
-- **Agent 1**: Database tables and migrations
-- **Agent 2**: Service layer and business logic
-- **Agent 3**: API endpoints and middleware
-- **Agent 4**: UI components and forms
-- **Agent 5**: Test suites and documentation
-
-All running **simultaneously** in the same worktree.
-
-### The Math of Velocity
-
-**Traditional Approach:**
-- Epic with 3 issues
-- Sequential execution
-
-**This System:**
-- Same epic with 3 issues
-- Each issue splits into ~4 parallel streams
-- **12 agents working simultaneously**
-
-We're not assigning agents to issues. We're **leveraging multiple agents** to ship faster.
-
-### Context Optimization
-
-**Traditional single-thread approach:**
-- Main conversation carries ALL the implementation details
-- Context window fills with database schemas, API code, UI components
-- Eventually hits context limits and loses coherence
-
-**Parallel agent approach:**
-- Main thread stays clean and strategic
-- Each agent handles its own context in isolation
-- Implementation details never pollute the main conversation
-- Main thread maintains oversight without drowning in code
-
-Your main conversation becomes the conductor, not the orchestra.
-
-### GitHub vs Local: Perfect Separation
-
-**What GitHub Sees:**
-- Clean, simple issues
-- Progress updates
-- Completion status
-
-**What Actually Happens Locally:**
-- Issue #1234 explodes into 5 parallel agents
-- Agents coordinate through Git commits
-- Complex orchestration hidden from view
-
-GitHub doesn't need to know HOW the work got done – just that it IS done.
-
-### The Command Flow
+### Building
 
 ```bash
-# Analyze what can be parallelized
-/pm:issue-analyze 1234
+# Build all packages
+pnpm build
 
-# Launch the swarm
-/pm:epic-start memory-system
-
-# Watch the magic
-# 12 agents working across 3 issues
-# All in: ../epic-memory-system/
-
-# One clean merge when done
-/pm:epic-merge memory-system
+# Build specific package
+cd packages/web && pnpm build
 ```
 
-## Key Features & Benefits
-
-### 🧠 **Context Preservation**
-Never lose project state again. Each epic maintains its own context, agents read from `.claude/context/`, and updates locally before syncing.
-
-### ⚡ **Parallel Execution**
-Ship faster with multiple agents working simultaneously. Tasks marked `parallel: true` enable conflict-free concurrent development.
-
-### 🔗 **GitHub Native**
-Works with tools your team already uses. Issues are the source of truth, comments provide history, and there is no dependency on the Projects API.
-
-### 🤖 **Agent Specialization**
-Right tool for every job. Different agents for UI, API, and database work. Each reads requirements and posts updates automatically.
-
-### 📊 **Full Traceability**
-Every decision is documented. PRD → Epic → Task → Issue → Code → Commit. Complete audit trail from idea to production.
-
-### 🚀 **Developer Productivity**
-Focus on building, not managing. Intelligent prioritization, automatic context loading, and incremental sync when ready.
-
-## Proven Results
-
-Teams using this system report:
-- **89% less time** lost to context switching – you'll use `/compact` and `/clear` a LOT less
-- **5-8 parallel tasks** vs 1 previously – editing/testing multiple files at the same time
-- **75% reduction** in bug rates – due to the breaking down features into detailed tasks
-- **Up to 3x faster** feature delivery – based on feature size and complexity
-
-## Example Flow
+### Testing
 
 ```bash
-# Start a new feature
-/pm:prd-new memory-system
+# Run all tests
+pnpm test
 
-# Review and refine the PRD...
-
-# Create implementation plan
-/pm:prd-parse memory-system
-
-# Review the epic...
-
-# Break into tasks and push to GitHub
-/pm:epic-oneshot memory-system
-# Creates issues: #1234 (epic), #1235, #1236 (tasks)
-
-# Start development on a task
-/pm:issue-start 1235
-# Agent begins work, maintains local progress
-
-# Sync progress to GitHub
-/pm:issue-sync 1235
-# Updates posted as issue comments
-
-# Check overall status
-/pm:epic-show memory-system
+# Package-specific tests
+cd packages/core && pnpm test
 ```
 
-## Get Started Now
-
-### Quick Setup (2 minutes)
-
-1. **Install this repository into your project**:
-
-   #### Unix/Linux/macOS
-
-   ```bash
-   cd path/to/your/project/
-   curl -sSL https://raw.githubusercontent.com/automazeio/ccpm/main/ccpm.sh | bash
-   # or: wget -qO- https://raw.githubusercontent.com/automazeio/ccpm/main/ccpm.sh | bash
-   ```
-
-   #### Windows (PowerShell)
-   ```bash
-   cd path/to/your/project/
-   iwr -useb https://raw.githubusercontent.com/automazeio/ccpm/main/ccpm.bat | iex
-   ```
-   > ⚠️ **IMPORTANT**: If you already have a `.claude` directory, clone this repository to a different directory and copy the contents of the cloned `.claude` directory to your project's `.claude` directory.
-
-   See full/other installation options in the [installation guide ›](https://github.com/automazeio/ccpm/tree/main/install)
-
-
-2. **Initialize the PM system**:
-   ```bash
-   /pm:init
-   ```
-   This command will:
-   - Install GitHub CLI (if needed)
-   - Authenticate with GitHub
-   - Install [gh-sub-issue extension](https://github.com/yahsan2/gh-sub-issue) for proper parent-child relationships
-   - Create required directories
-   - Update .gitignore
-
-3. **Create `CLAUDE.md`** with your repository information
-   ```bash
-   /init include rules from .claude/CLAUDE.md
-   ```
-   > If you already have a `CLAUDE.md` file, run: `/re-init` to update it with important rules from `.claude/CLAUDE.md`.
-
-4. **Prime the system**:
-   ```bash
-   /context:create
-   ```
-
-
-
-### Start Your First Feature
+### Database Development
 
 ```bash
-/pm:prd-new your-feature-name
+cd packages/core
+
+# Generate new migration
+pnpm db:generate
+
+# Apply schema changes
+pnpm db:push  
+
+# Open database studio
+pnpm db:studio
 ```
 
-Watch as structured planning transforms into shipped code.
+## 📋 Environment Variables
 
-## Local vs Remote
+### Required
+- `DATABASE_URL` - PostgreSQL connection string
+- `BETTER_AUTH_SECRET` - Authentication secret (min 32 chars)
+- `AUTH_URL` - Application base URL
 
-| Operation | Local | GitHub |
-|-----------|-------|--------|
-| PRD Creation | ✅ | — |
-| Implementation Planning | ✅ | — |
-| Task Breakdown | ✅ | ✅ (sync) |
-| Execution | ✅ | — |
-| Status Updates | ✅ | ✅ (sync) |
-| Final Deliverables | — | ✅ |
+### Optional
+- `SMTP_*` - Email configuration for verification
+- `GEMINI_API_KEY` - AI analysis service
+- `GITHUB_CLIENT_*` - GitHub OAuth
+- `GOOGLE_CLIENT_*` - Google OAuth  
+- `MICROSOFT_CLIENT_*` - Microsoft OAuth
 
-## Technical Notes
+### Deployment-Specific
+- `DEPLOYMENT_MODE` - `self-hosted` or `cloud`
+- `NODE_ENV` - `development`, `staging`, `production`
+- `NEXT_PUBLIC_*` - Client-side environment variables
 
-### GitHub Integration
-- Uses **gh-sub-issue extension** for proper parent-child relationships
-- Falls back to task lists if extension not installed
-- Epic issues track sub-task completion automatically
-- Labels provide additional organization (`epic:feature`, `task:feature`)
+## 🤝 Contributing
 
-### File Naming Convention
-- Tasks start as `001.md`, `002.md` during decomposition
-- After GitHub sync, renamed to `{issue-id}.md` (e.g., `1234.md`)
-- Makes it easy to navigate: issue #1234 = file `1234.md`
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md).
 
-### Design Decisions
-- Intentionally avoids GitHub Projects API complexity
-- All commands operate on local files first for speed
-- Synchronization with GitHub is explicit and controlled
-- Worktrees provide clean git isolation for parallel work
-- GitHub Projects can be added separately for visualization
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Development Setup for Contributors
+
+```bash
+# Fork and clone your fork
+git clone https://github.com/YOUR_USERNAME/privyloop.git
+cd privyloop
+
+# Install dependencies
+pnpm install
+
+# Set up local database
+docker compose -f docker-compose.dev.yml up -d
+cd packages/core && pnpm db:push
+
+# Configure environment (IMPORTANT: Both locations needed!)
+cp .env.local.example .env.local
+cp packages/web/.env.local.example packages/web/.env.local
+# Edit both files with your settings
+
+# Start development
+pnpm dev
+```
+
+## 📄 License
+
+This project is licensed under the [Business Source License 1.1](LICENSE).
+
+**Summary:**
+- ✅ Free for personal, educational, and non-commercial use
+- ✅ Source code is fully visible and auditable
+- ✅ Community contributions welcome
+- ❌ Commercial hosting of competing services restricted
+- 🔄 Converts to Apache 2.0 after 4 years
+
+## 🆘 Support
+
+### Community Support
+- 📖 [Documentation](https://docs.privyloop.com)
+- 💬 [GitHub Discussions](https://github.com/your-org/privyloop/discussions)
+- 🐛 [Issue Tracker](https://github.com/your-org/privyloop/issues)
+
+### Commercial Support
+- 🚀 [Cloud Service](https://privyloop.com) - Managed hosting
+- 📧 [Enterprise Support](mailto:enterprise@privyloop.com) - Custom implementations
+
+## 🔗 Links
+
+- 🌐 [Website](https://privyloop.com)
+- 📚 [Documentation](https://docs.privyloop.com)  
+- 🐦 [Twitter](https://twitter.com/privyloop)
+- 💼 [LinkedIn](https://linkedin.com/company/privyloop)
 
 ---
 
-## Support This Project
-
-Claude Code PM was developed at [Automaze](https://automaze.io) **for developers who ship, by developers who ship**.
-
-If Claude Code PM helps your team ship better software:
-
-- ⭐ **[Star this repository](https://github.com/automazeio/ccpm)** to show your support
-- 🐦 **[Follow @aroussi on X](https://x.com/aroussi)** for updates and tips
-
-
----
-
-> [!TIP]
-> **Ship faster with Automaze.** We partner with founders to bring their vision to life, scale their business, and optimize for success.
-> **[Visit Automaze to book a call with me ›](https://automaze.io)**
-
----
-
-## Star History
-
-![Star History Chart](https://api.star-history.com/svg?repos=automazeio/ccpm)
+**Made with ❤️ for digital privacy rights**
