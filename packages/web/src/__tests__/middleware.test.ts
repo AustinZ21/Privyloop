@@ -10,7 +10,7 @@ jest.mock('../lib/auth-client', () => ({
 
 describe('Middleware', () => {
   const createRequest = (url: string, headers: Record<string, string> = {}) => {
-    return new NextRequest(new URL(url, 'http://localhost:3000'), {
+    return new NextRequest(new URL(url, 'http://localhost:3030'), {
       headers: new Headers(headers),
     })
   }
