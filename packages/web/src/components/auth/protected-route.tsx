@@ -48,7 +48,9 @@ export function ProtectedRoute({
       } else {
         // Redirect to login page
         const loginUrl = `/login?redirect=${encodeURIComponent(currentPath)}`;
-        router.replace(loginUrl);
+        if (window.location.pathname + window.location.search !== loginUrl) {
+          router.replace(loginUrl);
+        }
         return;
       }
     }
@@ -63,8 +65,14 @@ export function ProtectedRoute({
 
     // Handle authenticated users accessing auth pages
     if (!requireAuth && isAuthenticated) {
-      const redirect = searchParams.get('redirect') || redirectTo;
-      router.replace(redirect);
+      // Read redirect once to avoid effect loops due to searchParams identity changes
+      const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+      const redirect = params.get('redirect') || redirectTo;
+      if (redirect && (window.location.pathname !== redirect)) {
+        router.replace(redirect);
+      } else if (!redirect && window.location.pathname !== redirectTo) {
+        router.replace(redirectTo);
+      }
       return;
     }
   }, [
@@ -76,7 +84,6 @@ export function ProtectedRoute({
     fallbackToModal,
     redirectTo,
     router,
-    searchParams,
     open
   ]);
 
@@ -169,7 +176,7 @@ export function withAuth<P extends object>(
 // Convenience components
 export function RequireAuth({ children }: { children: React.ReactNode }) {
   return (
-    <ProtectedRoute requireAuth={true} fallbackToModal={false}>
+    <ProtectedRoute requireAuth={true} fallbackToModal={true}>
       {children}
     </ProtectedRoute>
   );

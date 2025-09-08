@@ -102,15 +102,21 @@ export function SignupModal() {
   useEffect(() => {
     if (isAuthenticated && isOpen && success) {
       const redirectUrl = getAuthRedirectUrl();
-      
-      setTimeout(() => {
+      const target = redirectUrl && redirectUrl !== '/' ? redirectUrl : '/dashboard';
+      const doRedirect = () => {
         close();
-        if (redirectUrl && redirectUrl !== '/') {
-          router.push(redirectUrl);
-        } else {
-          router.push('/dashboard');
+        try {
+          if (typeof window !== 'undefined' && window.top === window) {
+            window.location.assign(target);
+          } else {
+            router.push(target);
+          }
+        } catch {
+          router.push(target);
         }
-      }, 1500);
+      };
+      const id = setTimeout(doRedirect, 300);
+      return () => clearTimeout(id);
     }
   }, [isAuthenticated, isOpen, success, close, router]);
 
