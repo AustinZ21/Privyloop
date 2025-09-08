@@ -9,8 +9,16 @@ import postgres from 'postgres';
 import { config, getConnectionOptions } from './config';
 import { schema, type DatabaseSchema } from './schema';
 
+// Persist connection/log flags across HMR in dev
+declare global {
+  // eslint-disable-next-line no-var
+  var __PRIVY_DB__: ReturnType<typeof drizzle<DatabaseSchema>> | null | undefined;
+  // eslint-disable-next-line no-var
+  var __PRIVY_DB_LOGGED__: boolean | undefined;
+}
+
 // Global connection instance
-let dbConnection: ReturnType<typeof drizzle<DatabaseSchema>> | null = null;
+let dbConnection: ReturnType<typeof drizzle<DatabaseSchema>> | null = (globalThis as any).__PRIVY_DB__ ?? null;
 let client: ReturnType<typeof postgres> | null = null;
 
 /**
