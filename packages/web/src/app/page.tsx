@@ -1,18 +1,36 @@
 "use client";
 
+import React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Button } from 'src/components/ui/button';
 import { Shield, ArrowRight, User, UserPlus } from 'lucide-react';
-import { useAuthState } from 'src/lib/auth-client';
+import { useAuthState, getAuthRedirectUrl, clearAuthRedirectUrl } from 'src/lib/auth-client';
 import { useDialogManager } from 'src/lib/dialog-manager';
 
 export default function HomePage() {
   const { isAuthenticated, isLoading, user } = useAuthState();
+  const router = useRouter();
   const { open } = useDialogManager();
 
   const handleAuthAction = (action: 'login' | 'signup') => {
     open(action);
   };
+
+  // After social login/callback, redirect authenticated users to intended page or dashboard
+  React.useEffect(() => {
+    if (isLoading || !isAuthenticated) return;
+    try {
+      const redirectUrl = getAuthRedirectUrl();
+      const target = redirectUrl && redirectUrl !== '/' ? redirectUrl : '/dashboard';
+      if (typeof window !== 'undefined' && window.location.pathname !== target) {
+        clearAuthRedirectUrl();
+        router.replace(target);
+      }
+    } catch {
+      // no-op
+    }
+  }, [isLoading, isAuthenticated, router]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-bg-900 via-bg-800 to-bg-700">

@@ -31,13 +31,7 @@ export const authClient = createAuthClient({
 });
 
 // Export auth hooks and utilities from Better Auth
-export const {
-  useSession,
-  signIn,
-  signOut,
-  signUp,
-  resetPassword,
-} = authClient;
+export const { signIn, signOut, signUp, resetPassword } = authClient;
 
 // Enhanced authentication state management
 export interface AuthState {
@@ -127,7 +121,9 @@ export class AuthSync {
 
 // Enhanced session hook with cross-tab sync and feature flags
 export function useAuthState(): AuthState {
-  const sessionQuery = useSession();
+  // Minimal, throttled session state with broadcast updates
+  const [localSession, setLocalSession] = React.useState<Session | null>(null);
+  const [loading, setLoading] = React.useState(true);
   const [syncState, setSyncState] = React.useState<Partial<AuthState>>({});
 
   React.useEffect(() => {
@@ -137,6 +133,8 @@ export function useAuthState(): AuthState {
       switch (event.type) {
         case 'session-changed':
           setSyncState(prev => ({ ...prev, ...event.data }));
+          // Proactively refresh local session on change
+          void fetchSession();
           break;
         case 'logout':
           setSyncState({
@@ -146,6 +144,7 @@ export function useAuthState(): AuthState {
             isEmailVerified: false,
             subscriptionTier: 'free',
           });
+          setLocalSession(null);
           break;
       }
     });
@@ -153,8 +152,32 @@ export function useAuthState(): AuthState {
     return unsubscribe;
   }, []);
 
-  const user = sessionQuery.data?.user || syncState.user;
-  const session = sessionQuery.data || syncState.session;
+  // Throttled session fetcher
+  const fetchSession = React.useCallback(async () => {
+    try {
+      const res = await fetch('/api/auth/get-session', { credentials: 'include' });
+      if (!res.ok) throw new Error('session fetch failed');
+      const data = await res.json();
+      // Normalize to always include `user` when present so auth state is correct
+      const normalized = data?.user ? { user: data.user, session: data.session } : null;
+      setLocalSession(normalized);
+    } catch (e) {
+      setLocalSession(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    // Initial fetch
+    void fetchSession();
+    // Refresh at most once per minute
+    const id = setInterval(fetchSession, 60_000);
+    return () => clearInterval(id);
+  }, [fetchSession]);
+
+  const user = (localSession as any)?.user || syncState.user;
+  const session = (localSession as any) || syncState.session;
   const isAuthenticated = !!user;
   const isEmailVerified = user?.emailVerified ?? false;
   const subscriptionTier = (user as any)?.subscriptionTier || 'free';
@@ -167,7 +190,7 @@ export function useAuthState(): AuthState {
   return {
     user: user || null,
     session: session || null,
-    isLoading: sessionQuery.isPending,
+    isLoading: loading,
     isAuthenticated,
     isEmailVerified,
     subscriptionTier,
@@ -299,9 +322,15 @@ export function setAuthRedirectUrl(url: string): void {
   localStorage.setItem('auth-redirect-url', url);
   
   // Also set in URL for direct page access
-  const currentUrl = new URL(window.location.href);
-  currentUrl.searchParams.set('redirect', url);
-  window.history.replaceState({}, '', currentUrl.toString());
+  try {
+    // Only attempt history updates in top-level, same-origin contexts
+    if (window.top !== window) return;
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set('redirect', url);
+    window.history.replaceState({}, '', currentUrl.toString());
+  } catch (_err) {
+    // Swallow history errors in restricted contexts (e.g., extension frames)
+  }
 }
 
 export function clearAuthRedirectUrl(): void {
@@ -309,9 +338,14 @@ export function clearAuthRedirectUrl(): void {
   
   localStorage.removeItem('auth-redirect-url');
   
-  const currentUrl = new URL(window.location.href);
-  currentUrl.searchParams.delete('redirect');
-  window.history.replaceState({}, '', currentUrl.toString());
+  try {
+    if (window.top !== window) return;
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.delete('redirect');
+    window.history.replaceState({}, '', currentUrl.toString());
+  } catch (_err) {
+    // Ignore in sandboxed contexts
+  }
 }
 
 // Password strength alias for backward compatibility

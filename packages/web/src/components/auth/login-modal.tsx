@@ -64,23 +64,28 @@ export function LoginModal() {
     }
   }, [isOpen]);
 
-  // Auto-redirect on authentication success
+  // Auto-redirect when authenticated (email/password & social)
   useEffect(() => {
-    if (isAuthenticated && isOpen && success) {
+    if (isAuthenticated && isOpen) {
       const redirectUrl = getAuthRedirectUrl();
-      setSuccess(true);
-      
-      setTimeout(() => {
+      const target = redirectUrl && redirectUrl !== '/' ? redirectUrl : '/dashboard';
+      const doRedirect = () => {
         close();
         clearAuthRedirectUrl(); // Clear stored redirect URL
-        if (redirectUrl && redirectUrl !== '/') {
-          router.push(redirectUrl);
-        } else {
-          router.push('/dashboard');
+        try {
+          if (window.top === window) {
+            window.location.assign(target);
+          } else {
+            router.push(target);
+          }
+        } catch {
+          router.push(target);
         }
-      }, 1500); // Show success message briefly
+      };
+      const id = setTimeout(doRedirect, 300);
+      return () => clearTimeout(id);
     }
-  }, [isAuthenticated, isOpen, success, close, router]);
+  }, [isAuthenticated, isOpen, close, router]);
 
   const validateForm = (): boolean => {
     const newErrors: LoginError[] = [];
@@ -168,10 +173,7 @@ export function LoginModal() {
       }
 
       // Better Auth social login
-      await signIn.social({ 
-        provider,
-        callbackURL: `${window.location.origin}/dashboard`
-      });
+      await signIn.social({ provider });
     } catch (error) {
       console.error(`${provider} login error:`, error);
       setErrors([{ message: 'Social login failed. Please try again.' }]);
