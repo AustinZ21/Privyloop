@@ -1,8 +1,8 @@
 ---
 name: privyloop
-status: backlog
+status: in_progress
 created: 2025-09-03T22:29:18Z
-progress: 0%
+progress: 40%
 prd: docs/privyloop-PRD.md
 github: https://github.com/AustinZ21/Privyloop/issues/1
 ---
