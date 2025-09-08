@@ -10,7 +10,8 @@ import { PlatformRegistry } from '../platform-registry';
 import { GoogleScraper } from '../platforms/google';
 import { FacebookScraper } from '../platforms/facebook';
 import { LinkedInScraper } from '../platforms/linkedin';
-import { type ScrapingContext, type ExtractedPrivacyData, COMPRESSION_TARGETS } from '../types';
+import { type ScrapingContext, type ExtractedPrivacyData, COMPRESSION_TARGETS, SCRAPING_TIMEOUTS } from '../types';
+import type { Database } from '../../database/connection';
 
 // Mock database
 const mockDb = {
@@ -29,7 +30,7 @@ const mockDb = {
       where: jest.fn().mockResolvedValue([{ id: 'test-id' }])
     })
   })
-} as any;
+} as unknown as Database;
 
 // Mock platform config
 const mockPlatformConfig = {
@@ -151,7 +152,7 @@ describe('ScrapingEngine', () => {
       const compressed = templateSystem.compressUserSettings(mockTemplate, largeSettings);
       const stats = templateSystem.calculateCompressionStats(mockTemplate, largeSettings);
 
-      expect(stats.compressionRatio).toBeLessThan(COMPRESSION_TARGETS.SIZE_REDUCTION);
+      expect(stats.savings).toBeGreaterThanOrEqual(COMPRESSION_TARGETS.SIZE_REDUCTION);
       expect(stats.savings).toBeGreaterThan(0);
       
       // Should only store differences from template defaults
@@ -442,12 +443,13 @@ describe('ScrapingEngine', () => {
     });
 
     test('should handle scraping timeout', async () => {
+      jest.useFakeTimers();
       const mockScraper = {
         platform: 'test-platform',
         version: '1.0.0',
         canScrape: jest.fn().mockResolvedValue(true),
         scrape: jest.fn().mockImplementation(async () => {
-          // Simulate timeout
+          // Simulate long-running scrape
           await new Promise(resolve => setTimeout(resolve, 35000));
           return { success: false };
         }),
@@ -459,9 +461,10 @@ describe('ScrapingEngine', () => {
       };
 
       scrapingEngine.registerScraper('test-platform', mockScraper as any);
-
-      const result = await scrapingEngine.scrapePrivacySettings(mockContext);
-
+      const promise = scrapingEngine.scrapePrivacySettings(mockContext);
+      // Advance just past the engine's default timeout
+      await jest.advanceTimersByTimeAsync(SCRAPING_TIMEOUTS.DEFAULT + 1);
+      const result = await promise;
       expect(result.success).toBe(false);
       expect(result.error?.message).toContain('timeout');
     });

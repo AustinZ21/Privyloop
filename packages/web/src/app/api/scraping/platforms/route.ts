@@ -5,12 +5,14 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@privyloop/core/database/config';
+import { getDb } from '@privyloop/core/database';
 import { PlatformRegistry } from '@privyloop/core/scraping/platform-registry';
 import { eq, and } from 'drizzle-orm';
 import { platforms } from '@privyloop/core/database/schema';
+import { validateAdminAccess } from '../../../../lib/auth-helpers';
 
 // Initialize platform registry
+const db = getDb();
 const platformRegistry = new PlatformRegistry(db);
 
 /**
@@ -75,7 +77,7 @@ export async function GET(request: NextRequest) {
       // Add extension-specific metadata
       extensionConfig: {
         permissions: platform.manifestPermissions,
-        rateLimit: platform.scrapingConfig.rateLimit || {
+        rateLimit: platform.scrapingConfig?.rateLimit || {
           requestsPerMinute: 10,
           cooldownMinutes: 1,
         },
@@ -100,7 +102,7 @@ export async function GET(request: NextRequest) {
       error: {
         code: 'PLATFORM_CONFIG_ERROR',
         message: 'Failed to fetch platform configurations',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined,
       },
     }, { status: 500 });
   }
@@ -112,11 +114,13 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    // TODO: Add authentication and admin role check
-    // const user = await getCurrentUser(request);
-    // if (!user || user.role !== 'admin') {
-    //   return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    // }
+    const authResult = await validateAdminAccess(request);
+    if (!authResult.success) {
+      return NextResponse.json({ 
+        success: false, 
+        error: authResult.error 
+      }, { status: authResult.error!.status });
+    }
 
     const body = await request.json();
     
@@ -134,22 +138,54 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Sanitize inputs with URL validation
+    let sanitizedData;
+    try {
+      sanitizedData = {
+        name: body.name.trim().substring(0, 100),
+        slug: body.slug.toLowerCase().replace(/[^a-z0-9-]/g, ''),
+        domain: new URL(body.domain).hostname, // Validates URL format
+        description: (body.description || '').trim().substring(0, 500),
+        logoUrl: body.logoUrl ? new URL(body.logoUrl).toString() : undefined,
+        websiteUrl: body.websiteUrl ? new URL(body.websiteUrl).toString() : undefined,
+        privacyPageUrls: Array.isArray(body.privacyPageUrls) 
+          ? body.privacyPageUrls.map((url: string) => new URL(url).toString()).slice(0, 10)
+          : [],
+        scrapingConfig: body.scrapingConfig, // Will be validated by platform registry
+        manifestPermissions: Array.isArray(body.manifestPermissions) 
+          ? body.manifestPermissions.filter((p: string) => typeof p === 'string').slice(0, 20)
+          : [],
+        isActive: Boolean(body.isActive),
+        isSupported: Boolean(body.isSupported),
+        requiresAuth: Boolean(body.requiresAuth),
+        configVersion: (body.configVersion || '1.0.0').trim().substring(0, 20),
+      };
+    } catch (error) {
+      return NextResponse.json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid URL format provided',
+        },
+      }, { status: 400 });
+    }
+
     // Register platform using platform registry
     const platformId = await platformRegistry.registerPlatform({
-      name: body.name,
-      slug: body.slug,
-      domain: body.domain,
-      description: body.description || '',
-      logoUrl: body.logoUrl,
-      websiteUrl: body.websiteUrl,
-      privacyPageUrls: body.privacyPageUrls,
-      scrapingConfig: body.scrapingConfig,
-      manifestPermissions: body.manifestPermissions || [],
-      isActive: body.isActive ?? true,
-      isSupported: body.isSupported ?? true,
-      requiresAuth: body.requiresAuth ?? true,
-      configVersion: body.configVersion || '1.0.0',
-      lastUpdatedBy: 'api', // TODO: Use actual user ID
+      name: sanitizedData.name,
+      slug: sanitizedData.slug,
+      domain: sanitizedData.domain,
+      description: sanitizedData.description,
+      logoUrl: sanitizedData.logoUrl ?? null,
+      websiteUrl: sanitizedData.websiteUrl ?? null,
+      privacyPageUrls: sanitizedData.privacyPageUrls,
+      scrapingConfig: sanitizedData.scrapingConfig,
+      manifestPermissions: sanitizedData.manifestPermissions,
+      isActive: sanitizedData.isActive,
+      isSupported: sanitizedData.isSupported,
+      requiresAuth: sanitizedData.requiresAuth,
+      configVersion: sanitizedData.configVersion,
+      lastUpdatedBy: authResult.user!.id,
     });
 
     return NextResponse.json({
@@ -168,7 +204,7 @@ export async function POST(request: NextRequest) {
       error: {
         code: 'PLATFORM_REGISTRATION_ERROR',
         message: 'Failed to register platform',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined,
       },
     }, { status: 500 });
   }
@@ -180,7 +216,13 @@ export async function POST(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
-    // TODO: Add authentication and admin role check
+    const authResult = await validateAdminAccess(request);
+    if (!authResult.success) {
+      return NextResponse.json({ 
+        success: false, 
+        error: authResult.error 
+      }, { status: authResult.error!.status });
+    }
     
     const url = new URL(request.url);
     const platformId = url.searchParams.get('id');
@@ -200,7 +242,7 @@ export async function PUT(request: NextRequest) {
     // Update platform using platform registry
     const updated = await platformRegistry.updatePlatform(platformId, {
       ...body,
-      lastUpdatedBy: 'api', // TODO: Use actual user ID
+      lastUpdatedBy: authResult.user!.id,
     });
 
     if (!updated) {
@@ -229,7 +271,7 @@ export async function PUT(request: NextRequest) {
       error: {
         code: 'PLATFORM_UPDATE_ERROR',
         message: 'Failed to update platform',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined,
       },
     }, { status: 500 });
   }
@@ -241,7 +283,13 @@ export async function PUT(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
-    // TODO: Add authentication and admin role check
+    const authResult = await validateAdminAccess(request);
+    if (!authResult.success) {
+      return NextResponse.json({ 
+        success: false, 
+        error: authResult.error 
+      }, { status: authResult.error!.status });
+    }
     
     const url = new URL(request.url);
     const platformId = url.searchParams.get('id');
@@ -285,7 +333,7 @@ export async function DELETE(request: NextRequest) {
       error: {
         code: 'PLATFORM_DEACTIVATION_ERROR',
         message: 'Failed to deactivate platform',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined,
       },
     }, { status: 500 });
   }
@@ -308,7 +356,4 @@ async function initializeDefaultPlatforms() {
   }
 }
 
-// Initialize on module load (for development)
-if (process.env.NODE_ENV === 'development') {
-  initializeDefaultPlatforms();
-}
+// (Initialization can be triggered elsewhere; do not export from route modules.)

@@ -15,6 +15,115 @@ export class GoogleScraper extends BaseScraper {
   readonly platform = 'google';
   readonly version = '1.0.0';
 
+  constructor() {
+    // Default Google scraping configuration
+    super({
+      selectors: {
+        'web-activity': {
+          selector: '[data-id="WAA"] [role="switch"]',
+          type: 'toggle',
+        },
+        'location-history': {
+          selector: '[data-id="LH"] [role="switch"]',
+          type: 'toggle',
+        },
+        'ad-personalization': {
+          selector: '[data-id="AdsPersonalization"] [role="switch"]',
+          type: 'toggle',
+        },
+        'youtube-history': {
+          selector: '[data-id="YTH"] [role="switch"]',
+          type: 'toggle',
+        },
+      },
+      waitForSelectors: ['[role="switch"]'],
+      rateLimit: {
+        requestsPerMinute: 5,
+        cooldownMinutes: 2,
+      },
+    });
+  }
+
+  // Robust selector configuration with fallback strategies
+  private readonly selectors = {
+    webActivity: [
+      '[data-id="WAA"] [role="switch"]',
+      '[aria-label*="Web & App Activity"] [role="switch"]',
+      '[data-testid="web-activity-toggle"]',
+      'button[aria-describedby*="web-activity"]'
+    ],
+    locationHistory: [
+      '[data-id="LH"] [role="switch"]',
+      '[aria-label*="Location History"] [role="switch"]',
+      '[data-testid="location-history-toggle"]',
+      'button[aria-describedby*="location-history"]'
+    ],
+    youtubeHistory: [
+      '[data-id="YTH"] [role="switch"]',
+      '[aria-label*="YouTube History"] [role="switch"]',
+      '[data-testid="youtube-history-toggle"]',
+      'button[aria-describedby*="youtube-history"]'
+    ],
+    adInterests: [
+      '[data-topic-id] [role="button"]',
+      '[aria-label*="interest"] button',
+      '.interest-category button',
+      '[data-testid="ad-interest"]'
+    ],
+    locationSharing: [
+      '[data-sharing-type] [role="switch"]',
+      '[aria-label*="location sharing"] [role="switch"]',
+      '[data-testid="location-sharing-toggle"]',
+      'button[data-location-type]'
+    ]
+  } as const;
+
+  /**
+   * Try multiple selectors with fallback strategy
+   */
+  private async findElementWithFallback(selectors: readonly string[]): Promise<Element | null> {
+    // Check if we're in a browser environment
+    if (typeof document === 'undefined') {
+      return null;
+    }
+
+    for (const selector of selectors) {
+      try {
+        const element = await this.waitForSelector(selector, 1000); // Shorter timeout per selector
+        if (element) {
+          return element;
+        }
+      } catch (error) {
+        // Continue to next selector on error
+        console.debug(`Selector failed: ${selector}`, error);
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Extract toggle setting with fallback selectors
+   */
+  private async extractToggleSettingWithFallback(
+    settingName: string, 
+    selectors: readonly string[]
+  ): Promise<boolean | null> {
+    for (const selector of selectors) {
+      try {
+        const result = await this.extractToggleSetting(settingName, selector);
+        if (result !== null) {
+          return result;
+        }
+      } catch (error) {
+        // Continue to next selector on error
+        console.debug(`Toggle extraction failed for ${settingName} with selector: ${selector}`, error);
+      }
+    }
+    
+    console.warn(`No toggle found for ${settingName} with any selector`);
+    return null;
+  }
+
   async scrape(context: ScrapingContext): Promise<ScrapingResult> {
     const startTime = new Date();
 
@@ -79,19 +188,19 @@ export class GoogleScraper extends BaseScraper {
 
     try {
       // Web & App Activity
-      const webActivityToggle = await this.extractToggleSetting('web-activity', '[data-id="WAA"] [role="switch"]');
+      const webActivityToggle = await this.extractToggleSettingWithFallback('web-activity', this.selectors.webActivity);
       if (webActivityToggle !== null) {
         settings['web-activity'] = webActivityToggle;
       }
 
       // Location History
-      const locationHistoryToggle = await this.extractToggleSetting('location-history', '[data-id="LH"] [role="switch"]');
+      const locationHistoryToggle = await this.extractToggleSettingWithFallback('location-history', this.selectors.locationHistory);
       if (locationHistoryToggle !== null) {
         settings['location-history'] = locationHistoryToggle;
       }
 
       // YouTube History
-      const youtubeHistoryToggle = await this.extractToggleSetting('youtube-history', '[data-id="YTH"] [role="switch"]');
+      const youtubeHistoryToggle = await this.extractToggleSettingWithFallback('youtube-history', this.selectors.youtubeHistory);
       if (youtubeHistoryToggle !== null) {
         settings['youtube-history'] = youtubeHistoryToggle;
       }
@@ -225,15 +334,29 @@ export class GoogleScraper extends BaseScraper {
     try {
       const interests: string[] = [];
 
-      // Look for interest categories
-      const interestElements = document.querySelectorAll('[data-topic-id] [role="button"]');
-      
-      interestElements.forEach(element => {
-        const interestText = element.textContent?.trim();
-        if (interestText && !interests.includes(interestText)) {
-          interests.push(interestText);
+      // Check if we're in a browser environment
+      if (typeof document === 'undefined') {
+        console.warn('Document not available, skipping ad interests extraction');
+        return [];
+      }
+
+      // Look for interest categories using fallback selectors
+      let interestElements: NodeListOf<Element> | null = null;
+      for (const selector of this.selectors.adInterests) {
+        interestElements = document.querySelectorAll(selector);
+        if (interestElements.length > 0) {
+          break;
         }
-      });
+      }
+      
+      if (interestElements && interestElements.length > 0) {
+        interestElements.forEach(element => {
+          const interestText = element.textContent?.trim();
+          if (interestText && !interests.includes(interestText)) {
+            interests.push(interestText);
+          }
+        });
+      }
 
       return interests.slice(0, 20); // Limit to first 20 interests
 
@@ -250,15 +373,29 @@ export class GoogleScraper extends BaseScraper {
     const settings: Record<string, any> = {};
 
     try {
-      // Check for location sharing toggles
-      const sharingToggles = document.querySelectorAll('[data-sharing-type] [role="switch"]');
-      
-      sharingToggles.forEach(toggle => {
-        const sharingType = toggle.closest('[data-sharing-type]')?.getAttribute('data-sharing-type');
-        if (sharingType) {
-          settings[`location-sharing-${sharingType}`] = this.getToggleState(toggle);
+      // Check if we're in a browser environment
+      if (typeof document === 'undefined') {
+        console.warn('Document not available, skipping location sharing extraction');
+        return settings;
+      }
+
+      // Check for location sharing toggles using fallback selectors
+      let sharingToggles: NodeListOf<Element> | null = null;
+      for (const selector of this.selectors.locationSharing) {
+        sharingToggles = document.querySelectorAll(selector);
+        if (sharingToggles.length > 0) {
+          break;
         }
-      });
+      }
+      
+      if (sharingToggles && sharingToggles.length > 0) {
+        sharingToggles.forEach(toggle => {
+          const sharingType = toggle.closest('[data-sharing-type]')?.getAttribute('data-sharing-type');
+          if (sharingType) {
+            settings[`location-sharing-${sharingType}`] = this.getToggleState(toggle);
+          }
+        });
+      }
 
     } catch (error) {
       console.error('Error extracting location sharing settings:', error);

@@ -5,8 +5,8 @@
  */
 
 import { randomUUID } from 'crypto';
-import { type Database } from '../database/config';
-import { eq, and, desc } from 'drizzle-orm';
+import { type Database } from '../database/connection';
+import { eq, and, desc, sql, count } from 'drizzle-orm';
 import { privacySnapshots, privacyTemplates, platforms } from '../database/schema';
 import {
   type ScrapingContext,
@@ -20,13 +20,16 @@ import {
   isScrapingSuccess,
   scrapingContextSchema,
 } from './types';
+import { type Platform } from '../database/schema/platforms';
 import { TemplateSystemImpl } from './template-system';
 import { PlatformRegistry } from './platform-registry';
+import { FirecrawlService } from './services/firecrawl-service';
 
 export class ScrapingEngine {
   private templateSystem: TemplateSystem;
   private platformRegistry: PlatformRegistry;
   private scrapers: Map<string, PlatformScraper> = new Map();
+  private firecrawlService?: FirecrawlService;
 
   constructor(
     private db: Database,
@@ -34,6 +37,20 @@ export class ScrapingEngine {
   ) {
     this.templateSystem = new TemplateSystemImpl(db);
     this.platformRegistry = new PlatformRegistry(db);
+    if (firecrawlApiKey) {
+      const rpm = parseInt(process.env.FIRECRAWL_REQUESTS_PER_MINUTE || '', 10);
+      const retries = parseInt(process.env.FIRECRAWL_MAX_RETRIES || '', 10);
+      const backoff = parseInt(process.env.FIRECRAWL_BACKOFF_BASE_MS || '', 10);
+      const ttl = parseInt(process.env.FIRECRAWL_CACHE_TTL_MS || '', 10);
+
+      this.firecrawlService = new FirecrawlService({
+        apiKey: firecrawlApiKey,
+        requestsPerMinute: Number.isFinite(rpm) ? rpm : 30,
+        maxRetries: Number.isFinite(retries) ? retries : 3,
+        backoffBaseMs: Number.isFinite(backoff) ? backoff : 500,
+        cacheTtlMs: Number.isFinite(ttl) ? ttl : 60 * 60 * 1000,
+      });
+    }
   }
 
   /**
@@ -236,9 +253,9 @@ export class ScrapingEngine {
    */
   private async fallbackScrape(
     context: ScrapingContext,
-    platform: any
+    platform: Platform
   ): Promise<ScrapingResult> {
-    if (!this.firecrawlApiKey) {
+    if (!this.firecrawlService) {
       return this.createErrorResult(
         'Firecrawl API key not configured for fallback scraping',
         'fallback_unavailable',
@@ -246,12 +263,24 @@ export class ScrapingEngine {
       );
     }
 
-    // TODO: Implement Firecrawl integration
-    return this.createErrorResult(
-      'Firecrawl fallback not yet implemented',
-      'fallback_not_implemented',
-      false
-    );
+    try {
+      const targetUrl = platform.privacyPageUrls?.main || platform.websiteUrl || `https://${platform.domain}`;
+      const result = await this.firecrawlService.scrapePrivacyPage(targetUrl, { ...context, method: 'firecrawl' });
+
+      if (isScrapingSuccess(result)) {
+        // Process and store via templates
+        await this.processScrapingResult({ ...context, method: 'firecrawl' }, result as any);
+      }
+
+      return result;
+    } catch (error) {
+      return this.createErrorResult(
+        error instanceof Error ? error.message : 'Firecrawl fallback failed',
+        'fallback_error',
+        true,
+        { originalError: error }
+      );
+    }
   }
 
   /**
@@ -327,7 +356,7 @@ export class ScrapingEngine {
     await this.db
       .update(privacyTemplates)
       .set({
-        usageCount: privacyTemplates.usageCount + 1,
+        usageCount: sql`${privacyTemplates.usageCount} + 1`,
         updatedAt: new Date(),
       })
       .where(eq(privacyTemplates.id, templateId));
@@ -340,11 +369,20 @@ export class ScrapingEngine {
     context: ScrapingContext,
     result: ScrapingResult & { data: ExtractedPrivacyData }
   ): Promise<void> {
-    // Create a basic snapshot without template optimization
+    // Ensure we have a template to satisfy FK; create a minimal one if needed
+    let templateId: string | undefined;
+    try {
+      const minimalTemplate = await this.templateSystem.createNewTemplate(context.platformId, result.data);
+      templateId = (minimalTemplate as any).id;
+    } catch (e) {
+      // If template creation fails, rethrow to surface the error path upstream
+      throw e;
+    }
+
     await this.db.insert(privacySnapshots).values({
       userId: context.userId,
       platformId: context.platformId,
-      templateId: null, // No template used
+      templateId: templateId!,
       userSettings: result.data.extractedSettings,
       scanId: result.metadata.scanId,
       scanMethod: context.method,
@@ -398,12 +436,12 @@ export class ScrapingEngine {
 
     // Get basic counts
     const totalScans = await this.db
-      .select({ count: privacySnapshots.id })
+      .select({ count: count() })
       .from(privacySnapshots)
       .where(whereCondition);
 
     const successfulScans = await this.db
-      .select({ count: privacySnapshots.id })
+      .select({ count: count() })
       .from(privacySnapshots)
       .where(
         and(
@@ -413,8 +451,8 @@ export class ScrapingEngine {
       );
 
     // Calculate success rate
-    const total = totalScans.length;
-    const successful = successfulScans.length;
+    const total = totalScans[0]?.count ?? 0;
+    const successful = successfulScans[0]?.count ?? 0;
     const successRate = total > 0 ? (successful / total) * 100 : 0;
 
     return {

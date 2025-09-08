@@ -66,6 +66,7 @@
 
   "host_permissions": [
     "http://localhost:3000/*",
+    "http://localhost:3030/*",
     "https://api.privyloop.com/*"
   ],
 
@@ -85,11 +86,19 @@
         "content/injected-script.js",
         "icons/*"
       ],
-      "matches": ["<all_urls>"]
+      "matches": [
+        "*://myaccount.google.com/*",
+        "*://adssettings.google.com/*",
+        "*://myactivity.google.com/*",
+        "*://www.facebook.com/*",
+        "*://facebook.com/*",
+        "*://www.linkedin.com/*",
+        "*://linkedin.com/*"
+      ]
     }
   ],
 
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' http://localhost:3000 https://api.privyloop.com"
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' http://localhost:3000 http://localhost:3030 https://api.privyloop.com"
   }
 }

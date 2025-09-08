@@ -168,6 +168,11 @@ export const scrapingResultSchema = z.object({
       version: z.string(),
       confidenceScore: z.number().min(0).max(1),
     }).optional(),
+    raw: z.object({
+      html: z.string().optional(),
+      screenshots: z.array(z.string()).optional(),
+      metadata: z.record(z.any()).optional(),
+    }).optional(),
   }).optional(),
   error: z.object({
     code: z.string(),

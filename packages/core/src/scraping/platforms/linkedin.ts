@@ -15,6 +15,40 @@ export class LinkedInScraper extends BaseScraper {
   readonly platform = 'linkedin';
   readonly version = '1.0.0';
 
+  constructor() {
+    // Default LinkedIn scraping configuration
+    super({
+      selectors: {
+        'public-profile-visibility': {
+          selector: '[data-control-name="public_profile"] input[type="radio"]:checked',
+          type: 'radio',
+          expectedValues: ['public', 'limited'],
+        },
+        'activity-broadcasts': {
+          selector: '[data-control-name="activity_feed"] input[type="checkbox"]',
+          type: 'toggle',
+        },
+        'profile-discovery': {
+          selector: '[data-control-name="profile_discovery"] input[type="checkbox"]',
+          type: 'toggle',
+        },
+        'contact-sync': {
+          selector: '[data-control-name="contact_sync"] input[type="checkbox"]',
+          type: 'toggle',
+        },
+        'ad-targeting': {
+          selector: '[data-control-name="ad_targeting"] input[type="checkbox"]',
+          type: 'toggle',
+        },
+      },
+      waitForSelectors: ['[data-control-name="public_profile"]'],
+      rateLimit: {
+        requestsPerMinute: 5,
+        cooldownMinutes: 3,
+      },
+    });
+  }
+
   async scrape(context: ScrapingContext): Promise<ScrapingResult> {
     const startTime = new Date();
 

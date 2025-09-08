@@ -6,8 +6,9 @@
 
 import { randomUUID } from 'crypto';
 import { createHash } from 'crypto';
-import { type Database } from '../database/config';
+import { type Database } from '../database/connection';
 import { eq, and, desc } from 'drizzle-orm';
+import { isEqual } from '../utils/comparison';
 import { privacyTemplates } from '../database/schema';
 import {
   type PrivacyTemplate,
@@ -218,7 +219,7 @@ export class TemplateSystemImpl implements TemplateSystem {
           hasChanges = true;
         } else {
           // Only store if different from template default
-          if (JSON.stringify(userValue) !== JSON.stringify(templateSetting.defaultValue)) {
+          if (!isEqual(userValue, templateSetting.defaultValue)) {
             compressedCategory[settingId] = userValue;
             hasChanges = true;
           }
@@ -273,7 +274,8 @@ export class TemplateSystemImpl implements TemplateSystem {
     template: PrivacyTemplate,
     userSettings: UserPrivacySettings
   ): CompressionStats {
-    // Calculate sizes (approximate JSON byte sizes)
+    // Calculate serialized sizes (UTF-8 byte count when serialized to JSON)
+    // Note: This represents storage size, not in-memory size
     const originalData = {
       template: template.settingsStructure,
       userSettings,

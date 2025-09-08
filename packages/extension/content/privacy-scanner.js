@@ -8,13 +8,21 @@
 let scanningActive = false;
 let currentConfig = null;
 let backgroundPort = null;
+let pageObserver = null;
 
-// Platform-specific scrapers
-const platformScrapers = {
-  google: new GoogleContentScraper(),
-  facebook: new FacebookContentScraper(),
-  linkedin: new LinkedInContentScraper(),
-};
+// Platform-specific scrapers - lazy initialization
+let platformScrapers = null;
+
+function getPlatformScrapers() {
+  if (!platformScrapers) {
+    platformScrapers = {
+      google: new GoogleContentScraper(),
+      facebook: new FacebookContentScraper(),
+      linkedin: new LinkedInContentScraper(),
+    };
+  }
+  return platformScrapers;
+}
 
 // Initialize content script
 (function initialize() {
@@ -115,7 +123,7 @@ async function performPrivacyScan(scanId, config, userId) {
   const startTime = Date.now();
   
   // Get platform-specific scraper
-  const scraper = platformScrapers[config.slug];
+  const scraper = getPlatformScrapers()[config.slug];
   if (!scraper) {
     throw new Error(`No scraper available for platform: ${config.slug}`);
   }
@@ -208,16 +216,24 @@ class BasePlatformScraper {
   
   async waitForElement(selector, timeout = 5000) {
     return new Promise((resolve) => {
+      let observer = null;
+      let timeoutId = null;
+      
+      const cleanup = () => {
+        if (observer) observer.disconnect();
+        if (timeoutId) clearTimeout(timeoutId);
+      };
+      
       const element = document.querySelector(selector);
       if (element) {
         resolve(element);
         return;
       }
       
-      const observer = new MutationObserver((mutations, obs) => {
+      observer = new MutationObserver((mutations, obs) => {
         const element = document.querySelector(selector);
         if (element) {
-          obs.disconnect();
+          cleanup();
           resolve(element);
         }
       });
@@ -227,8 +243,8 @@ class BasePlatformScraper {
         subtree: true
       });
       
-      setTimeout(() => {
-        observer.disconnect();
+      timeoutId = setTimeout(() => {
+        cleanup();
         resolve(null);
       }, timeout);
     });
@@ -255,7 +271,7 @@ class BasePlatformScraper {
     // Find checked radio in group
     const name = element.name || element.getAttribute('data-name');
     if (name) {
-      const checked = document.querySelector(`input[name="${name}"]:checked`);
+      const checked = document.querySelector(`input[name="${CSS.escape(name)}"]:checked`);
       return checked ? checked.value : null;
     }
     
@@ -467,7 +483,12 @@ async function waitForPageReady(timeout = 10000) {
  * Observe page changes for dynamic content
  */
 function observePageChanges() {
-  const observer = new MutationObserver((mutations) => {
+  // Disconnect existing observer if any
+  if (pageObserver) {
+    pageObserver.disconnect();
+  }
+  
+  pageObserver = new MutationObserver((mutations) => {
     // Check if privacy settings content has changed
     const hasRelevantChanges = mutations.some(mutation => {
       return mutation.addedNodes.length > 0 || 
@@ -482,7 +503,7 @@ function observePageChanges() {
     }
   });
   
-  observer.observe(document.body, {
+  pageObserver.observe(document.body, {
     childList: true,
     subtree: true,
     attributes: true,
@@ -514,6 +535,12 @@ function calculateConfidenceScore(settings, scrapingConfig) {
   
   return Math.min(completionRatio, 1);
 }
+
+// Add cleanup on page unload
+window.addEventListener('beforeunload', () => {
+  if (pageObserver) pageObserver.disconnect();
+  if (backgroundPort) backgroundPort.disconnect();
+});
 
 // Export for testing (if needed)
 if (typeof module !== 'undefined' && module.exports) {

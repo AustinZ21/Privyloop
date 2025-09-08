@@ -5,15 +5,40 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@privyloop/core/database/config';
+import { getDb } from '@privyloop/core/database';
 import { ScrapingEngine } from '@privyloop/core/scraping/scraping-engine';
-import { eq } from 'drizzle-orm';
+import { eq, desc, and } from 'drizzle-orm';
 import { users, privacySnapshots } from '@privyloop/core/database/schema';
 import { z } from 'zod';
 import { randomUUID } from 'crypto';
+// Simple deep equality check for JSON-like objects (arrays, objects, primitives)
+function isEqual(a: any, b: any): boolean {
+  if (a === b) return true;
+  if (a && b && typeof a === 'object' && typeof b === 'object') {
+    if (Array.isArray(a)) {
+      if (!Array.isArray(b) || a.length !== b.length) return false;
+      for (let i = 0; i < a.length; i++) if (!isEqual(a[i], b[i])) return false;
+      return true;
+    }
+    const aKeys = Object.keys(a);
+    const bKeys = Object.keys(b);
+    if (aKeys.length !== bKeys.length) return false;
+    for (const k of aKeys) if (!isEqual(a[k], b[k])) return false;
+    return true;
+  }
+  // NaN equality
+  return Number.isNaN(a) && Number.isNaN(b);
+}
 
-// Initialize scraping engine
+// Validate required environment variables
+if (!process.env.FIRECRAWL_API_KEY) {
+  console.error('FIRECRAWL_API_KEY environment variable is not set');
+}
+
+// Initialize database and scraping engine
+const db = getDb();
 const scrapingEngine = new ScrapingEngine(db, process.env.FIRECRAWL_API_KEY);
+
 
 // Validation schema for incoming data
 const privacyDataSchema = z.object({
@@ -140,7 +165,7 @@ export async function POST(request: NextRequest) {
       error: {
         code: 'PROCESSING_ERROR',
         message: 'Failed to process privacy data',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined,
       },
     }, { status: 500 });
   }
@@ -150,77 +175,14 @@ export async function POST(request: NextRequest) {
  * Process scraping result with template optimization
  */
 async function processScrapingResultWithTemplates(context: any, result: any) {
-  const templateSystem = (scrapingEngine as any).templateSystem;
-  const { data } = result;
-
   try {
-    // Find or create template
-    let template = await templateSystem.findMatchingTemplate(
-      context.platformId,
-      data
-    );
-
-    if (!template) {
-      template = await templateSystem.createNewTemplate(
-        context.platformId,
-        data
-      );
-      console.log(`Created new template for platform ${context.platformId}:`, template.id);
-    }
-
-    // Compress user settings using template
-    const compressedSettings = templateSystem.compressUserSettings(
-      template,
-      data.extractedSettings
-    );
-
-    // Calculate compression statistics
-    const compressionStats = templateSystem.calculateCompressionStats(
-      template,
-      data.extractedSettings
-    );
-
-    console.log('Compression stats:', {
-      originalSize: compressionStats.originalSize,
-      compressedSize: compressionStats.compressedSize,
-      compressionRatio: compressionStats.compressionRatio,
-      savings: compressionStats.savings,
-    });
-
-    // Get previous snapshot for change detection
+    const template = await ensureTemplateExists(context.platformId, result.data);
+    const processedData = await processDataWithTemplate(template, result.data);
     const previousSnapshot = await getPreviousSnapshot(context.userId, context.platformId);
-    const changes = previousSnapshot 
-      ? await detectChanges(previousSnapshot.userSettings, compressedSettings)
-      : {};
-
-    // Calculate risk score and recommendations
-    const { riskScore, riskFactors, recommendations } = await calculatePrivacyRisk(
-      template,
-      compressedSettings
-    );
-
-    // Store optimized snapshot
-    await db.insert(privacySnapshots).values({
-      userId: context.userId,
-      platformId: context.platformId,
-      templateId: template.id,
-      userSettings: compressedSettings,
-      scanId: result.metadata.scanId,
-      scanMethod: context.method,
-      changesSincePrevious: changes,
-      hasChanges: Object.keys(changes).length > 0,
-      scanStatus: 'completed',
-      scanDurationMs: result.metadata.duration,
-      completionRate: result.metadata.completionRate,
-      confidenceScore: result.metadata.confidenceScore,
-      riskScore,
-      riskFactors,
-      recommendations,
-      scannedAt: result.metadata.endTime,
-    });
-
-    // Update template usage statistics
-    await updateTemplateUsageStats(template.id);
+    const changes = await detectChangesFromPrevious(previousSnapshot, processedData.compressedSettings);
+    const riskAssessment = await calculatePrivacyRisk(template, processedData.compressedSettings);
+    
+    await persistOptimizedSnapshot(context, result, template, processedData, changes, riskAssessment);
 
   } catch (error) {
     console.error('Error in template processing:', error);
@@ -231,15 +193,107 @@ async function processScrapingResultWithTemplates(context: any, result: any) {
 }
 
 /**
+ * Ensure template exists for platform, create if needed
+ */
+async function ensureTemplateExists(platformId: string, data: any) {
+  const templateSystem = (scrapingEngine as any).templateSystem;
+  
+  let template = await templateSystem.findMatchingTemplate(platformId, data);
+
+  if (!template) {
+    template = await templateSystem.createNewTemplate(platformId, data);
+    console.log(`Created new template for platform ${platformId}:`, template.id);
+  }
+
+  return template;
+}
+
+/**
+ * Process extracted data using template compression
+ */
+async function processDataWithTemplate(template: any, data: any) {
+  const templateSystem = (scrapingEngine as any).templateSystem;
+  
+  const compressedSettings = templateSystem.compressUserSettings(
+    template,
+    data.extractedSettings
+  );
+
+  const compressionStats = templateSystem.calculateCompressionStats(
+    template,
+    data.extractedSettings
+  );
+
+  console.log('Compression stats:', {
+    originalSize: compressionStats.originalSize,
+    compressedSize: compressionStats.compressedSize,
+    compressionRatio: compressionStats.compressionRatio,
+    savings: compressionStats.savings,
+  });
+
+  return {
+    compressedSettings,
+    compressionStats
+  };
+}
+
+/**
+ * Detect changes from previous snapshot
+ */
+async function detectChangesFromPrevious(
+  previousSnapshot: any,
+  currentSettings: Record<string, Record<string, any>>
+) {
+  if (!previousSnapshot) {
+    return {};
+  }
+
+  return await detectChanges(previousSnapshot.userSettings, currentSettings);
+}
+
+/**
+ * Persist optimized snapshot to database
+ */
+async function persistOptimizedSnapshot(
+  context: any,
+  result: any,
+  template: any,
+  processedData: any,
+  changes: any,
+  riskAssessment: any
+) {
+  await db.insert(privacySnapshots).values({
+    userId: context.userId,
+    platformId: context.platformId,
+    templateId: template.id,
+    userSettings: processedData.compressedSettings,
+    scanId: result.metadata.scanId,
+    scanMethod: context.method,
+    changesSincePrevious: changes,
+    hasChanges: Object.keys(changes).length > 0,
+    scanStatus: 'completed',
+    scanDurationMs: result.metadata.duration,
+    completionRate: result.metadata.completionRate,
+    confidenceScore: result.metadata.confidenceScore,
+    riskScore: riskAssessment.riskScore,
+    riskFactors: riskAssessment.riskFactors,
+    recommendations: riskAssessment.recommendations,
+    scannedAt: result.metadata.endTime,
+  });
+}
+
+/**
  * Get user's previous privacy snapshot
  */
 async function getPreviousSnapshot(userId: string, platformId: string) {
   const [previous] = await db
     .select()
     .from(privacySnapshots)
-    .where(eq(privacySnapshots.userId, userId))
-    .where(eq(privacySnapshots.platformId, platformId))
-    .orderBy(privacySnapshots.scannedAt)
+    .where(and(
+      eq(privacySnapshots.userId, userId),
+      eq(privacySnapshots.platformId, platformId)
+    ))
+    .orderBy(desc(privacySnapshots.scannedAt))
     .limit(1);
 
   return previous;
@@ -260,7 +314,7 @@ async function detectChanges(
     for (const [settingId, currentValue] of Object.entries(categorySettings)) {
       const previousValue = previousCategory[settingId];
 
-      if (JSON.stringify(previousValue) !== JSON.stringify(currentValue)) {
+      if (!isEqual(previousValue, currentValue)) {
         if (!changes[categoryId]) {
           changes[categoryId] = {};
         }
@@ -284,7 +338,7 @@ async function detectChanges(
 async function calculatePrivacyRisk(template: any, userSettings: any) {
   let riskScore = 0;
   const riskFactors: string[] = [];
-  const recommendations = { high: [], medium: [], low: [] };
+  const recommendations: { high: string[]; medium: string[]; low: string[] } = { high: [], medium: [], low: [] };
 
   try {
     const structure = template.settingsStructure;
@@ -336,25 +390,19 @@ async function calculatePrivacyRisk(template: any, userSettings: any) {
   return { riskScore, riskFactors, recommendations };
 }
 
-/**
- * Update template usage statistics
- */
-async function updateTemplateUsageStats(templateId: string) {
-  // This would be implemented if we had direct access to privacyTemplates
-  // For now, we'll let the scraping engine handle it
-  console.log(`Template ${templateId} used successfully`);
-}
 
 /**
  * Store raw snapshot without template optimization (fallback)
  */
 async function storeRawSnapshot(context: any, result: any) {
   console.log('Storing raw snapshot as fallback');
-  
+  // Ensure a template exists to satisfy FK
+  const template = await ensureTemplateExists(context.platformId, result.data);
+
   await db.insert(privacySnapshots).values({
     userId: context.userId,
     platformId: context.platformId,
-    templateId: null, // No template optimization
+    templateId: template.id,
     userSettings: result.data.extractedSettings,
     scanId: result.metadata.scanId,
     scanMethod: context.method,

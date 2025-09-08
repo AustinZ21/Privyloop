@@ -4,10 +4,17 @@
  * Manifest V3 Service Worker
  */
 
-// Configuration
-const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://api.privyloop.com' 
-  : 'http://localhost:3000';
+// Configuration - Browser extension compatible
+const getApiBaseUrl = () => {
+  // Check if we're in production based on extension ID or manifest
+  const manifest = chrome.runtime.getManifest();
+  const isProduction = manifest.version_name?.includes('production') || 
+                      chrome.runtime.id !== 'development-extension-id';
+  
+  return isProduction ? 'https://api.privyloop.com' : 'http://localhost:3030';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 const STORAGE_KEYS = {
   USER_ID: 'userId',
@@ -160,6 +167,27 @@ async function handleMessage(message, sender, sendResponse) {
         sendResponse({ success: true });
         break;
 
+      case 'GET_CONFIG_FOR_ACTIVE_TAB':
+        try {
+          const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+          const activeTab = tabs[0];
+          if (!activeTab?.url) {
+            sendResponse({ success: false, error: 'No active tab' });
+            break;
+          }
+          const cfg = await getPlatformConfigForUrl(activeTab.url);
+          sendResponse({ success: true, data: cfg || null });
+        } catch (e) {
+          sendResponse({ success: false, error: e?.message || 'Detection failed' });
+        }
+        break;
+
+      case 'OPEN_AND_START_SCAN':
+        openAndStartScan(payload.platformId, payload.userId)
+          .then((r) => sendResponse({ success: true, data: r }))
+          .catch((e) => sendResponse({ success: false, error: e?.message || 'Failed to start' }));
+        return true;
+
       default:
         sendResponse({ success: false, error: `Unknown message type: ${type}` });
     }
@@ -294,7 +322,8 @@ async function startPrivacyScan(platformId, userId) {
     await chrome.storage.local.set({ [STORAGE_KEYS.SCAN_QUEUE]: queue });
 
     // Find active tab with platform URL
-    const config = await getPlatformConfigForUrl(platformId);
+    const configs = await getPlatformConfigs();
+    const config = configs[platformId];
     if (!config) {
       throw new Error(`Platform configuration not found: ${platformId}`);
     }
@@ -379,8 +408,9 @@ function generateScanId() {
 function matchesPattern(url, pattern) {
   // Convert URL pattern to RegExp
   const regexPattern = pattern
-    .replace(/\*/g, '.*')
-    .replace(/\?/g, '\\?');
+    .replace(/[.+^${}()|[\]\\]/g, '\\$&')  // Escape special regex chars first
+    .replace(/\\\*/g, '.*')                // Then handle wildcards (asterisk was escaped, so we match escaped version)
+    .replace(/\\\?/g, '\\?');              // Keep question marks escaped
   
   const regex = new RegExp(`^${regexPattern}$`);
   return regex.test(url);
@@ -426,8 +456,54 @@ async function ensureContentScriptInjected(tabId, config) {
         target: { tabId },
         files: ['content/privacy-scanner.js'],
       });
+      console.log(`Content script injected successfully for tab ${tabId}`);
     } catch (injectionError) {
       console.error('Failed to inject content script:', injectionError);
+      // Notify the user or attempt alternative injection method
+      throw new Error(`Cannot inject content script: ${injectionError.message}`);
     }
   }
 }
+
+function buildUrlFromPattern(pattern) {
+  try {
+    let p = pattern.replace('*://', 'https://');
+    p = p.replace('*', '');
+    if (!p.endsWith('/')) p += '/';
+    return p;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function openAndStartScan(platformId, userId) {
+  const configs = await getPlatformConfigs();
+  const config = configs[platformId];
+  if (!config) throw new Error(`Platform configuration not found: ${platformId}`);
+
+  try {
+    if (Array.isArray(config.permissions) && config.permissions.length > 0) {
+      await chrome.permissions.request({ origins: config.permissions });
+    }
+  } catch (e) {
+    console.warn('Permissions request failed or denied', e);
+  }
+
+  const target = Array.isArray(config.permissions) && config.permissions.length > 0
+    ? buildUrlFromPattern(config.permissions[0])
+    : null;
+  if (!target) throw new Error('No known URL for platform');
+
+  const created = await chrome.tabs.create({ url: target, active: true });
+  await new Promise(r => setTimeout(r, 2000));
+  await ensureContentScriptInjected(created.id, config);
+
+  const scanId = generateScanId();
+  const queue = await getScanQueue();
+  queue.push({ scanId, platformId, userId, status: 'pending', startTime: Date.now() });
+  await chrome.storage.local.set({ [STORAGE_KEYS.SCAN_QUEUE]: queue });
+
+  await chrome.tabs.sendMessage(created.id, { type: 'START_SCAN', scanId, config, userId });
+  return { scanId, status: 'started' };
+}
+

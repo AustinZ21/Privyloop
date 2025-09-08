@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PrivyLoop Privacy Scanner</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="container" data-testid="extension-popup">
+      <header class="header">
+        <div class="brand">
+          <div class="brand-logo">PL</div>
+          <div class="brand-title">PrivyLoop</div>
+        </div>
+        <button id="open-dashboard" data-testid="open-dashboard" class="btn btn-outline">
+          Dashboard
+        </button>
+      </header>
+
+      <main class="main">
+        <section class="section">
+          <label class="label" for="platform">Platform</label>
+          <select id="platform" class="select"></select>
+        </section>
+
+        <section class="actions">
+          <button id="scan" class="btn btn-primary" data-testid="scan-button">Scan Current Page</button>
+          <button id="sync" class="btn btn-outline">Sync Platforms</button>
+        </section>
+
+        <section class="section" id="results" data-testid="scan-results">
+          <div class="result-line"><span class="muted">Status:</span> <span id="status">Idle</span></div>
+          <div class="result-line"><span class="muted">Scan ID:</span> <span id="scanId">—</span></div>
+        </section>
+
+        <section class="section">
+          <button id="toggle-settings" class="btn btn-ghost" data-testid="extension-settings">Settings</button>
+          <div id="settings" class="settings hidden">
+            <label class="setting-item">
+              <input type="checkbox" id="enable-notifications" data-testid="enable-notifications" />
+              <span>Enable notifications</span>
+            </label>
+            <label class="setting-item">
+              <span>Scan frequency</span>
+              <select id="scan-frequency" class="select" data-testid="scan-frequency">
+                <option value="manual">Manual</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+              </select>
+            </label>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <span class="muted">Your privacy, your control.</span>
+      </footer>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+  </html>
+

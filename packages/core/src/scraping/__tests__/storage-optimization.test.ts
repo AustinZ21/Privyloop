@@ -8,9 +8,12 @@ import { describe, test, expect } from '@jest/globals';
 import { TemplateSystemImpl } from '../template-system';
 import { calculateStorageMetrics } from '../index';
 import { COMPRESSION_TARGETS } from '../types';
+import type { Database } from '../../database/connection';
 
-// Mock database
-const mockDb = {} as any;
+// Create a proper mock that satisfies the Database interface
+// Storage optimization tests don't actually use database methods, 
+// so minimal mock is sufficient
+const mockDb = {} as unknown as Database;
 
 describe('Storage Optimization Validation', () => {
   let templateSystem: TemplateSystemImpl;
@@ -319,9 +322,9 @@ describe('Storage Optimization Validation', () => {
     // User only changes 3 out of 20 settings
     const minimalUserChanges = {
       'privacy': {
-        'setting-0': true,   // Changed from false
-        'setting-5': false,  // Changed from true  
-        'setting-10': true,  // Changed from false
+        'setting-0': false,  // Changed from true (default)
+        'setting-5': true,   // Changed from false (default)
+        'setting-10': false, // Changed from true (default)
         // 17 other settings use defaults
       },
     };
@@ -379,32 +382,32 @@ describe('Storage Optimization Validation', () => {
     // Large template with 100 settings
     const largeTemplate = {
       settingsStructure: {
-        categories: Array.from({ length: 10 }, (_, categoryIndex) => [
+        categories: Object.fromEntries(Array.from({ length: 10 }, (_, categoryIndex) => [
           `category-${categoryIndex}`,
           {
             name: `Category ${categoryIndex}`,
-            settings: Array.from({ length: 10 }, (_, settingIndex) => [
+            settings: Object.fromEntries(Array.from({ length: 10 }, (_, settingIndex) => [
               `setting-${categoryIndex}-${settingIndex}`,
               {
                 name: `Setting ${settingIndex}`,
                 type: 'toggle',
                 defaultValue: settingIndex % 2 === 0,
               }
-            ]).reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {}),
+            ])),
           }
-        ]).reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {}),
+        ])),
         metadata: { totalSettings: 100, lastScrapedAt: new Date().toISOString() },
       },
     } as any;
 
     // Large user settings with 50% different from defaults
-    const largeUserSettings = Array.from({ length: 10 }, (_, categoryIndex) => [
+    const largeUserSettings = Object.fromEntries(Array.from({ length: 10 }, (_, categoryIndex) => [
       `category-${categoryIndex}`,
-      Array.from({ length: 10 }, (_, settingIndex) => [
+      Object.fromEntries(Array.from({ length: 10 }, (_, settingIndex) => [
         `setting-${categoryIndex}-${settingIndex}`,
         settingIndex % 4 === 0 ? !(settingIndex % 2 === 0) : (settingIndex % 2 === 0) // 50% different
-      ]).reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {}),
-    ]).reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
+      ])),
+    ]));
 
     // Test compression performance
     const compressed = templateSystem.compressUserSettings(largeTemplate, largeUserSettings);

@@ -258,10 +258,31 @@ export abstract class BaseScraper implements PlatformScraper {
   }
 
   protected async waitForSelector(selector: string, timeout: number = 5000): Promise<Element | null> {
-    // This would be implemented by the browser extension
-    // For now, return a mock implementation
+    // Check if we're in a browser environment
+    if (typeof document === 'undefined') {
+      console.warn('Document not available, skipping selector wait:', selector);
+      return null;
+    }
+
+    const startTime = Date.now();
+    
     return new Promise((resolve) => {
-      setTimeout(() => resolve(null), timeout);
+      const checkElement = () => {
+        const element = document.querySelector(selector);
+        if (element) {
+          resolve(element);
+          return;
+        }
+        
+        if (Date.now() - startTime >= timeout) {
+          resolve(null);
+          return;
+        }
+        
+        setTimeout(checkElement, 100);
+      };
+      
+      checkElement();
     });
   }
 

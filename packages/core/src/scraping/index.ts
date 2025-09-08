@@ -12,6 +12,18 @@
  * - Comprehensive error handling and validation
  */
 
+// Import necessary types for function parameters
+import type { Database } from '../database/connection';
+import type { Platform } from '../database/schema/platforms';
+// Import classes for function implementations
+import { ScrapingEngine } from './scraping-engine';
+import { PlatformRegistry } from './platform-registry';
+import { GoogleScraper } from './platforms/google';
+import { FacebookScraper } from './platforms/facebook';
+import { LinkedInScraper } from './platforms/linkedin';
+import { extensionMessageSchema } from './types';
+import type { ExtensionConfig, ExtensionMessage } from './types';
+
 // Core engine and systems
 export { ScrapingEngine } from './scraping-engine';
 export { TemplateSystemImpl as TemplateSystem } from './template-system';
@@ -54,6 +66,10 @@ export type {
   ExtensionConfig,
 } from './types';
 
+// Database and platform types
+export type { Database } from '../database/connection';
+export type { Platform } from '../database/schema/platforms';
+
 // Constants and configuration
 export {
   SCRAPING_TIMEOUTS,
@@ -87,7 +103,7 @@ export const STORAGE_OPTIMIZATION_STATS = {
  * Initialize scraping engine with all platform scrapers
  */
 export function createScrapingEngine(
-  db: any,
+  db: Database,
   firecrawlApiKey?: string
 ): ScrapingEngine {
   const engine = new ScrapingEngine(db, firecrawlApiKey);
@@ -173,7 +189,7 @@ export function createScrapingEngine(
 /**
  * Initialize platform registry with default configurations
  */
-export async function initializePlatformRegistry(db: any): Promise<PlatformRegistry> {
+export async function initializePlatformRegistry(db: Database): Promise<PlatformRegistry> {
   const registry = new PlatformRegistry(db);
   
   // Initialize default platforms if none exist
@@ -262,7 +278,7 @@ export const EXTENSION_HELPERS = {
   /**
    * Generate extension configuration for a platform
    */
-  generateExtensionConfig(platform: any): ExtensionConfig {
+  generateExtensionConfig(platform: Platform): ExtensionConfig {
     return {
       platformId: platform.id,
       scrapingConfig: platform.scrapingConfig,
@@ -278,7 +294,7 @@ export const EXTENSION_HELPERS = {
   /**
    * Validate extension message format
    */
-  validateExtensionMessage(message: any): boolean {
+  validateExtensionMessage(message: unknown): boolean {
     const result = extensionMessageSchema.safeParse(message);
     return result.success;
   },
@@ -286,7 +302,7 @@ export const EXTENSION_HELPERS = {
   /**
    * Create standard extension response
    */
-  createExtensionResponse(type: string, payload: any, requestId: string) {
+  createExtensionResponse(type: 'scan_request' | 'scan_result' | 'config_request' | 'config_response' | 'error', payload: unknown, requestId: string): ExtensionMessage {
     return {
       type,
       payload,

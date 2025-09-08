@@ -4,7 +4,7 @@
  * Serves configurations to browser extension and manages platform versioning
  */
 
-import { type Database } from '../database/config';
+import { type Database } from '../database/connection';
 import { eq, and } from 'drizzle-orm';
 import { platforms } from '../database/schema';
 import { type Platform, type PlatformScrapingConfig, SUPPORTED_PLATFORMS } from '../database/schema/platforms';
@@ -241,6 +241,7 @@ export class PlatformRegistry {
         isSupported: true,
         requiresAuth: true,
         configVersion: '1.0.0',
+        lastUpdatedBy: null,
       },
       {
         name: 'Facebook',
@@ -284,6 +285,7 @@ export class PlatformRegistry {
         isSupported: true,
         requiresAuth: true,
         configVersion: '1.0.0',
+        lastUpdatedBy: null,
       },
       {
         name: 'LinkedIn',
@@ -320,6 +322,7 @@ export class PlatformRegistry {
         isSupported: true,
         requiresAuth: true,
         configVersion: '1.0.0',
+        lastUpdatedBy: null,
       },
       {
         name: 'OpenAI',
@@ -356,6 +359,7 @@ export class PlatformRegistry {
         isSupported: true,
         requiresAuth: true,
         configVersion: '1.0.0',
+        lastUpdatedBy: null,
       },
     ];
   }
@@ -405,6 +409,17 @@ export class PlatformRegistry {
   }
 
   /**
+   * Convert glob pattern to regex
+   */
+  private globToRegex(pattern: string): RegExp {
+    const regexPattern = pattern
+      .replace(/[.+^${}()|[\]\\]/g, '\\$&')  // Escape special chars
+      .replace(/\*/g, '.*')
+      .replace(/\?/g, '.');
+    return new RegExp(`^${regexPattern}$`);
+  }
+
+  /**
    * Clear configuration cache
    */
   clearCache(): void {
@@ -434,12 +449,7 @@ export class PlatformRegistry {
     
     return requestedUrls.every(url => {
       return allowedPatterns.some(pattern => {
-        // Simple pattern matching - convert glob pattern to regex
-        const regexPattern = pattern
-          .replace(/\*/g, '.*')
-          .replace(/\?/g, '.');
-        
-        const regex = new RegExp(`^${regexPattern}$`);
+        const regex = this.globToRegex(pattern);
         return regex.test(url);
       });
     });
@@ -454,10 +464,7 @@ export class PlatformRegistry {
     return allPlatforms.filter(platform => {
       return permissions.some(permission => {
         return platform.manifestPermissions.some(manifestPermission => {
-          const regexPattern = manifestPermission
-            .replace(/\*/g, '.*')
-            .replace(/\?/g, '.');
-          const regex = new RegExp(`^${regexPattern}$`);
+          const regex = this.globToRegex(manifestPermission);
           return regex.test(permission);
         });
       });

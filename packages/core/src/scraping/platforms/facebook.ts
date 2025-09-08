@@ -15,6 +15,33 @@ export class FacebookScraper extends BaseScraper {
   readonly platform = 'facebook';
   readonly version = '1.0.0';
 
+  constructor() {
+    // Default Facebook scraping configuration
+    super({
+      selectors: {
+        'future-posts': {
+          selector: '[data-testid="privacy_selector"] [role="button"]',
+          type: 'select',
+          expectedValues: ['Public', 'Friends', 'Friends except...', 'Specific friends', 'Only me'],
+        },
+        'friend-requests': {
+          selector: '[data-testid="friend_requests_selector"] [role="button"]',
+          type: 'select',
+          expectedValues: ['Everyone', 'Friends of friends'],
+        },
+        'ad-preferences': {
+          selector: '[data-testid="ads_based_on_data"] [role="switch"]',
+          type: 'toggle',
+        },
+      },
+      waitForSelectors: ['[data-testid="privacy_selector"]'],
+      rateLimit: {
+        requestsPerMinute: 3,
+        cooldownMinutes: 5,
+      },
+    });
+  }
+
   async scrape(context: ScrapingContext): Promise<ScrapingResult> {
     const startTime = new Date();
 
@@ -357,6 +384,12 @@ export class FacebookScraper extends BaseScraper {
     try {
       const interests: string[] = [];
 
+      // Check if we're in a browser environment
+      if (typeof document === 'undefined') {
+        console.warn('Document not available, skipping ad interests extraction');
+        return [];
+      }
+
       // Look for ad interest elements
       const interestElements = document.querySelectorAll('[data-interest-id], [data-topic-name]');
       
@@ -390,12 +423,12 @@ export class FacebookScraper extends BaseScraper {
       return element.getAttribute('data-checked') === 'true';
     }
 
-    // Check for Facebook-specific classes
-    if (element.classList.contains('_5dsk') || element.classList.contains('_4nma')) {
+    // Check for semantic class names or data attributes instead
+    if (element.classList.contains('enabled') || element.classList.contains('checked')) {
       return true;
     }
 
-    if (element.classList.contains('_5dsm') || element.classList.contains('_4nmb')) {
+    if (element.classList.contains('disabled') || element.classList.contains('unchecked')) {
       return false;
     }
 

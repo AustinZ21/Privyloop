@@ -6,10 +6,20 @@
 
 import { type ExtractedPrivacyData, type ScrapingResult, type ScrapingContext } from '../types';
 
+type CacheEntry<T> = { value: T; expiresAt: number };
+
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 export interface FirecrawlConfig {
   apiKey: string;
   baseUrl?: string;
   timeout?: number;
+  requestsPerMinute?: number;
+  maxRetries?: number;
+  backoffBaseMs?: number;
+  cacheTtlMs?: number;
 }
 
 export interface FirecrawlCrawlOptions {
@@ -25,11 +35,22 @@ export class FirecrawlService {
   private apiKey: string;
   private baseUrl: string;
   private timeout: number;
+  private requestsPerMinute: number = 30;
+  private maxRetries: number = 3;
+  private backoffBaseMs: number = 500;
+  private cacheTtlMs: number = 60 * 60 * 1000; // 1 hour
+
+  private crawlCache: Map<string, CacheEntry<any>> = new Map();
+  private requestTimestamps: number[] = [];
 
   constructor(config: FirecrawlConfig) {
     this.apiKey = config.apiKey;
     this.baseUrl = config.baseUrl || 'https://api.firecrawl.dev';
     this.timeout = config.timeout || 30000;
+    if (config.requestsPerMinute) this.requestsPerMinute = Math.max(1, config.requestsPerMinute);
+    if (config.maxRetries !== undefined) this.maxRetries = Math.max(0, config.maxRetries);
+    if (config.backoffBaseMs) this.backoffBaseMs = Math.max(50, config.backoffBaseMs);
+    if (config.cacheTtlMs) this.cacheTtlMs = Math.max(60_000, config.cacheTtlMs);
   }
 
   /**
@@ -113,50 +134,98 @@ export class FirecrawlService {
   /**
    * Crawl URL using Firecrawl API
    */
-  private async crawlUrl(url: string, options: FirecrawlCrawlOptions) {
-    const response = await fetch(`${this.baseUrl}/v0/crawl`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.apiKey}`,
+  private async crawlUrl(url: string, options: FirecrawlCrawlOptions): Promise<{ success: true; data: any } | { success: false; error: any }> {
+    // Cache key based on URL and core options
+    const cacheKey = JSON.stringify({ url, formats: options.formats, onlyMainContent: options.onlyMainContent });
+    const now = Date.now();
+    const cached = this.crawlCache.get(cacheKey);
+    if (cached && cached.expiresAt > now) {
+      return { success: true, data: cached.value };
+    }
+
+    await this.enforceRateLimit();
+
+    const requestBody = {
+      url,
+      crawlerOptions: {
+        formats: options.formats || ['markdown'],
+        onlyMainContent: options.onlyMainContent ?? true,
+        includeTags: options.includeTags,
+        excludeTags: options.excludeTags,
+        waitFor: options.waitFor || 0,
       },
-      body: JSON.stringify({
-        url,
-        crawlerOptions: {
-          formats: options.formats || ['markdown'],
-          onlyMainContent: options.onlyMainContent ?? true,
-          includeTags: options.includeTags,
-          excludeTags: options.excludeTags,
-          waitFor: options.waitFor || 0,
-        },
-        pageOptions: {
-          headers: options.headers,
-        },
-      }),
-    });
+      pageOptions: {
+        headers: options.headers,
+      },
+    };
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(`Firecrawl API error: ${response.statusText} - ${errorData.error || 'Unknown error'}`);
+    const doFetch = async () => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), this.timeout);
+      try {
+        const response = await fetch(`${this.baseUrl}/v0/crawl`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.apiKey}`,
+          },
+          body: JSON.stringify(requestBody),
+          signal: controller.signal,
+        });
+        return response;
+      } finally {
+        clearTimeout(timeout);
+      }
+    };
+
+    let attempt = 0;
+    let lastError: any = null;
+    while (attempt <= this.maxRetries) {
+      try {
+        const res = await doFetch();
+        this.requestTimestamps.push(Date.now());
+        if (res.ok) {
+          const result = await res.json();
+          if (result?.jobId) {
+            const jobResult = await this.waitForJobCompletion(result.jobId);
+            if (jobResult?.success) {
+              this.crawlCache.set(cacheKey, { value: jobResult.data, expiresAt: Date.now() + this.cacheTtlMs });
+            }
+            return jobResult;
+          }
+          // Cache direct results
+          this.crawlCache.set(cacheKey, { value: result, expiresAt: Date.now() + this.cacheTtlMs });
+          return { success: true, data: result };
+        }
+        if (res.status === 429 || res.status >= 500) {
+          const retryAfterHeader = res.headers.get('Retry-After');
+          const retryAfterMs = retryAfterHeader ? parseInt(retryAfterHeader, 10) * 1000 : undefined;
+          attempt++;
+          const backoff = retryAfterMs ?? this.jitteredBackoff(attempt);
+          await sleep(backoff);
+          continue;
+        }
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(`Firecrawl API error: ${res.statusText} - ${errorData.error || 'Unknown error'}`);
+      } catch (err: any) {
+        lastError = err;
+        attempt++;
+        if (attempt > this.maxRetries) break;
+        await sleep(this.jitteredBackoff(attempt));
+      }
     }
 
-    const result = await response.json();
-    
-    // Handle job-based responses
-    if (result.jobId) {
-      return await this.waitForJobCompletion(result.jobId);
-    }
-
-    return result;
+    throw new Error(`Firecrawl fetch failed: ${lastError?.message || lastError}`);
   }
 
   /**
    * Wait for Firecrawl job completion
    */
-  private async waitForJobCompletion(jobId: string, maxWaitTime = 60000) {
+  private async waitForJobCompletion(jobId: string, maxWaitTime = 60000): Promise<{ success: true; data: any } | { success: false; error: any }> {
     const startTime = Date.now();
     
     while (Date.now() - startTime < maxWaitTime) {
+      await this.enforceRateLimit();
       const statusResponse = await fetch(`${this.baseUrl}/v0/crawl/status/${jobId}`, {
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
@@ -178,10 +247,26 @@ export class FirecrawlService {
       }
 
       // Wait before next check
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await sleep(2000);
     }
 
     throw new Error('Firecrawl job timeout');
+  }
+
+  private jitteredBackoff(attempt: number): number {
+    const base = this.backoffBaseMs * Math.pow(2, Math.max(0, attempt - 1));
+    const jitter = Math.floor(Math.random() * (this.backoffBaseMs / 2));
+    return base + jitter;
+  }
+
+  private async enforceRateLimit() {
+    const windowMs = 60_000;
+    const now = Date.now();
+    this.requestTimestamps = this.requestTimestamps.filter(ts => now - ts < windowMs);
+    if (this.requestTimestamps.length < this.requestsPerMinute) return;
+    const oldest = this.requestTimestamps[0];
+    const waitMs = windowMs - (now - oldest) + 10;
+    await sleep(waitMs);
   }
 
   /**
@@ -271,7 +356,9 @@ export class FirecrawlService {
 
       if (toggleCount > 0) {
         settings['detected-toggles'] = toggleCount;
-        settings['estimated-enabled'] = Math.floor(toggleCount * 0.7); // Assume 70% are enabled
+        // Don't make assumptions about toggle states without actual data
+        settings['toggle-count'] = toggleCount;
+        // Note: actual state cannot be determined from HTML structure alone
       }
 
     } catch (error) {
@@ -308,8 +395,8 @@ export class FirecrawlService {
       return false;
     }
 
-    // Default to enabled if unclear (privacy-conscious assumption)
-    return true;
+    // Return null when the state cannot be determined
+    return null;
   }
 
   /**
