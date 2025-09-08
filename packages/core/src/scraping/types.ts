@@ -229,3 +229,6 @@ export const COMPRESSION_TARGETS = {
   MAX_TEMPLATE_SIZE: 50 * 1024, // 50KB max template size
   MAX_USER_SETTINGS: 2 * 1024, // 2KB max user settings
 } as const;
+
+// Re-export DB-derived types for platform scrapers
+export type { UserPrivacySettings } from '../database/schema/privacy-snapshots';

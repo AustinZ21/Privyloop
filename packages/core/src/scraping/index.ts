@@ -109,74 +109,11 @@ export function createScrapingEngine(
   const engine = new ScrapingEngine(db, firecrawlApiKey);
 
   // Register platform-specific scrapers
-  const googleScraper = new GoogleScraper({
-    selectors: {
-      'web-activity': {
-        selector: '[data-id="WAA"] [role="switch"]',
-        type: 'toggle',
-      },
-      'location-history': {
-        selector: '[data-id="LH"] [role="switch"]',
-        type: 'toggle',
-      },
-      'ad-personalization': {
-        selector: '[data-id="AdsPersonalization"] [role="switch"]',
-        type: 'toggle',
-      },
-      'youtube-history': {
-        selector: '[data-id="YTH"] [role="switch"]',
-        type: 'toggle',
-      },
-    },
-    waitForSelectors: ['[role="switch"]'],
-    rateLimit: {
-      requestsPerMinute: 5,
-      cooldownMinutes: 2,
-    },
-  });
+  const googleScraper = new GoogleScraper();
 
-  const facebookScraper = new FacebookScraper({
-    selectors: {
-      'future-posts': {
-        selector: '[data-testid="privacy_selector"] [role="button"]',
-        type: 'select',
-        expectedValues: ['Public', 'Friends', 'Only me'],
-      },
-      'friend-requests': {
-        selector: '[data-testid="friend_requests_selector"] [role="button"]',
-        type: 'select',
-        expectedValues: ['Everyone', 'Friends of friends'],
-      },
-      'ads-based-on-data': {
-        selector: '[data-testid="ads_based_on_data"] [role="switch"]',
-        type: 'toggle',
-      },
-    },
-    waitForSelectors: ['[data-testid="privacy_selector"]'],
-    rateLimit: {
-      requestsPerMinute: 3,
-      cooldownMinutes: 5,
-    },
-  });
+  const facebookScraper = new FacebookScraper();
 
-  const linkedinScraper = new LinkedInScraper({
-    selectors: {
-      'public-profile-visibility': {
-        selector: '[data-control-name="public_profile"] input[type="radio"]:checked',
-        type: 'radio',
-        expectedValues: ['public', 'limited'],
-      },
-      'activity-broadcasts': {
-        selector: '[data-control-name="activity_feed"] input[type="checkbox"]',
-        type: 'toggle',
-      },
-    },
-    waitForSelectors: ['[data-control-name="public_profile"]'],
-    rateLimit: {
-      requestsPerMinute: 5,
-      cooldownMinutes: 3,
-    },
-  });
+  const linkedinScraper = new LinkedInScraper();
 
   // Register scrapers with engine
   engine.registerScraper('google', googleScraper);
