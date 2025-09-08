@@ -7,6 +7,8 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { getDb } from "../database";
 import { schema } from "../database/schema";
+import { users } from "../database/schema/users";
+import { session, account, verification } from "../database/schema/auth-tables";
 import { emailService } from "../services/email";
 import { logAuth, maskUrl, generateCorrelationId } from "../utils/logging";
 
@@ -33,7 +35,14 @@ export function createAuth(env: AuthEnvVars = {}) {
     baseURL: env.OAUTH_REDIRECT_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3030",
     database: drizzleAdapter(getDb(), {
       provider: "pg", // PostgreSQL
-      schema: schema,
+      // Map Better Auth expected model names to our tables
+      // better-auth expects: user, session, account, verification
+      schema: {
+        user: users,
+        session,
+        account,
+        verification,
+      },
     }),
     emailAndPassword: {
       enabled: true,
