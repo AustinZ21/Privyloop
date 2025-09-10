@@ -13,6 +13,8 @@ out/
 
 # Environment variables
 .env
+.env.oss
+.env.enterprise
 .env.local
 .env.development.local
 .env.test.local
@@ -61,3 +63,6 @@ packages/core/src/**/*.js
 # Misc stray
 nul
 packages/web/nul
+# Local dev snapshots
+tmp_*.html
+
