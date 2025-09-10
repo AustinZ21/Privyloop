@@ -11,6 +11,7 @@ import { eq, desc, and } from 'drizzle-orm';
 import { users, privacySnapshots } from '@privyloop/core/database/schema';
 import { z } from 'zod';
 import { randomUUID } from 'crypto';
+import { AIAnalysisService } from '@privyloop/core/services';
 // Simple deep equality check for JSON-like objects (arrays, objects, primitives)
 function isEqual(a: any, b: any): boolean {
   if (a === b) return true;
@@ -197,12 +198,20 @@ async function processScrapingResultWithTemplates(context: any, result: any) {
  */
 async function ensureTemplateExists(platformId: string, data: any) {
   const templateSystem = (scrapingEngine as any).templateSystem;
+  const aiService = new AIAnalysisService(db);
   
   let template = await templateSystem.findMatchingTemplate(platformId, data);
 
   if (!template) {
     template = await templateSystem.createNewTemplate(platformId, data);
     console.log(`Created new template for platform ${platformId}:`, template.id);
+  }
+
+  // Ensure AI analysis (once per template)
+  try {
+    template = await aiService.analyzeTemplateIfMissing(template);
+  } catch (err) {
+    console.error('AI analysis generation failed (non-fatal):', err);
   }
 
   return template;
