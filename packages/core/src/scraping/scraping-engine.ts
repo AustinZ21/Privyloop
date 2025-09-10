@@ -24,12 +24,14 @@ import { type Platform } from '../database/schema/platforms';
 import { TemplateSystemImpl } from './template-system';
 import { PlatformRegistry } from './platform-registry';
 import { FirecrawlService } from './services/firecrawl-service';
+import { AIAnalysisService } from '../services/ai/analysis-service';
 
 export class ScrapingEngine {
   private templateSystem: TemplateSystem;
   private platformRegistry: PlatformRegistry;
   private scrapers: Map<string, PlatformScraper> = new Map();
   private firecrawlService?: FirecrawlService;
+  private aiAnalysis: AIAnalysisService;
 
   constructor(
     private db: Database,
@@ -37,6 +39,7 @@ export class ScrapingEngine {
   ) {
     this.templateSystem = new TemplateSystemImpl(db);
     this.platformRegistry = new PlatformRegistry(db);
+    this.aiAnalysis = new AIAnalysisService(db);
     if (firecrawlApiKey) {
       const rpm = parseInt(process.env.FIRECRAWL_REQUESTS_PER_MINUTE || '', 10);
       const retries = parseInt(process.env.FIRECRAWL_MAX_RETRIES || '', 10);
@@ -201,6 +204,13 @@ export class ScrapingEngine {
           context.platformId,
           data
         );
+      }
+
+      // Ensure AI analysis is available once per template
+      try {
+        template = await this.aiAnalysis.analyzeTemplateIfMissing(template);
+      } catch (err) {
+        console.error('AI analysis generation failed (non-fatal):', err);
       }
 
       // Compress user settings using template
