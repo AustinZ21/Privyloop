@@ -1,0 +1,79 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PrivyLoop Privacy Scanner</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body class="dark">
+    <div class="container" data-testid="extension-popup">
+      <header class="header">
+        <div class="brand">
+          <div class="brand-logo">PL</div>
+          <div class="brand-title">PrivyLoop</div>
+        </div>
+        <button id="open-dashboard" data-testid="open-dashboard" class="btn btn-outline" style="border:1px solid hsl(var(--primary)); color:hsl(var(--primary));">Dashboard</button>
+      </header>
+
+      <main class="main">
+        <section class="section">
+          <div class="row">
+            <div class="sync" aria-live="polite" style="width:100%; display:flex; align-items:center; justify-content:space-between;">
+              <div class="hint muted" style="font-size:12px;">
+                Last synced: <span id="last-sync">-</span>
+              </div>
+              <div>
+                <button id="sync-now" class="btn btn-ghost btn-small" type="button" style="border:1px solid hsl(var(--primary)); color:hsl(var(--primary));">update now</button>
+                <span id="sync-state" class="hint muted" style="margin-left:8px;"></span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="row actions">
+            <div class="actions-left">
+              <label class="label" for="platform">Platform</label>
+              <select id="platform" class="select"></select>
+              <div id="detected" class="hint muted"></div>
+              <button id="scan" class="btn btn-primary" data-testid="scan-button" style="margin-top:8px;">
+                <span id="scan-label">Scan Now</span>
+              </button>
+              <div class="hint muted" style="margin-top:6px;">
+                <span>Status: <span id="status" class="pill pill-idle">Idle</span></span>
+                <span style="margin-left:8px;">ID: <span id="scanId">-</span></span>
+              </div>
+              <div class="hint muted">Scanning opens the platform page and runs in the background.</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <button id="toggle-settings" class="btn btn-ghost" data-testid="extension-settings">Settings</button>
+          <div id="settings" class="settings hidden">
+            <label class="setting-item toggle">
+              <span>Enable notifications</span>
+              <input type="checkbox" id="enable-notifications" data-testid="enable-notifications" />
+              <span class="slider" aria-hidden="true"></span>
+            </label>
+            <label class="setting-item">
+              <span>Scan frequency</span>
+              <select id="scan-frequency" class="select" data-testid="scan-frequency">
+                <option value="manual">Manual</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+              </select>
+            </label>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <span class="muted">Your privacy, your control.</span>
+      </footer>
+    </div>
+
+    <script src="popup2.js"></script>
+  </body>
+</html>

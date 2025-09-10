@@ -1,39 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Bash(bash .claude/scripts/test-and-log.sh:*)",
-      "Bash(.claude/scripts/test-and-log.sh:*)",
-      "Bash(bash .claude/scripts/pm/*)",
-      "Bash(.claude/scripts/pm/*)",
-
-      "Bash(cat *)",
-      "Bash(cat:*)",
-      "Bash(composer *)",
-      "Bash(fi)",
-      "Bash(find *)",
-      "Bash(gh *)",
-      "Bash(git *)",
-      "Bash(grep *)",
-      "Bash(kill:*)",
-      "Bash(ln:*)",
-      "Bash(ls *)",
-      "Bash(mv *)",
-      "Bash(npm *)",
-      "Bash(npx *)",
-      "Bash(pnpm *)",
-      "Bash(pytest *)",
-      "Bash(python *)",
-      "Bash(rm *)",
-      "Bash(ruff check *)",
-      "Bash(ruff check:*)",
-      "Bash(sed *)",
-      "Bash(sed:*)",
-      "Bash(then)",
-      "Bash(touch *)",
-      "Bash(tree *)",
-      "List(**)",
-      "WebFetch(domain:github.com)",
-      "WebSearch"
-    ]
+      "Read(/C:\\Users\\austi\\Github\\Production\\Privyloop\\.claude\\epics\\privyloop/**)",
+      "Read(/C:\\Users\\austi\\Github\\Production\\Privyloop\\.claude\\epics\\privyloop/**)",
+      "Read(/C:\\Users\\austi\\Github\\Production\\Privyloop\\packages/**)",
+      "Bash(mkdir:*)",
+      "Bash(openssl rand:*)",
+      "Bash(npm install:*)"
+    ],
+    "deny": [],
+    "ask": []
   }
 }

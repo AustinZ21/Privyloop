@@ -1,0 +1,56 @@
+{
+  "name": "privyloop",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Privacy-focused platform for tracking and managing corporate privacy policy changes",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "predev": "pnpm -F @privyloop/core db:setup && pnpm -F @privyloop/core db:seed",
+    "dev": "turbo run dev --parallel",
+    "dev:web": "pnpm -F @privyloop/web dev",
+    "dev:bootstrap": "pnpm -F @privyloop/core db:setup && pnpm -F @privyloop/core db:seed && pnpm -F @privyloop/web dev",
+    "db:setup": "pnpm -F @privyloop/core db:setup",
+    "db:seed": "pnpm -F @privyloop/core db:seed",
+    "ai:backfill": "pnpm -F @privyloop/core ai:backfill",
+    "ai:backfill:all": "pnpm -F @privyloop/core ai:backfill:all",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
+    "type-check": "turbo run type-check",
+    "clean": "turbo run clean && rm -rf node_modules .turbo"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@types/node": "^20.0.0",
+    "@types/nodemailer": "^7.0.1",
+    "eslint": "^8.0.0",
+    "playwright": "^1.55.0",
+    "prettier": "^3.0.0",
+    "turbo": "^1.13.4",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "keywords": [
+    "privacy",
+    "policy-tracking",
+    "browser-extension",
+    "dashboard"
+  ],
+  "author": "PrivyLoop Team",
+  "license": "BSL-1.1",
+  "dependencies": {
+    "@node-rs/argon2": "^2.0.2",
+    "better-auth": "^1.3.8",
+    "drizzle-orm": "^0.33.0",
+    "nodemailer": "^7.0.6"
+  }
+}

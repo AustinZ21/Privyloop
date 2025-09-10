@@ -1,0 +1,161 @@
+{
+  "description": "Realistic privacy settings profiles for storage compression testing",
+  "generated": "2025-01-07",
+  "platforms": {
+    "google": {
+      "template_size_kb": 45,
+      "expected_compression": 0.98,
+      "user_patterns": {
+        "privacy_conscious": {
+          "percentage": 25,
+          "characteristics": "All privacy features disabled, minimal data sharing"
+        },
+        "balanced": {
+          "percentage": 40, 
+          "characteristics": "Some convenience features enabled, selective sharing"
+        },
+        "convenience_focused": {
+          "percentage": 20,
+          "characteristics": "Most features enabled for better user experience"
+        },
+        "minimal_sharing": {
+          "percentage": 10,
+          "characteristics": "Only essential features enabled"
+        },
+        "open_sharing": {
+          "percentage": 5,
+          "characteristics": "Maximum personalization and sharing enabled"
+        }
+      }
+    },
+    "facebook": {
+      "template_size_kb": 38,
+      "expected_compression": 0.95,
+      "user_patterns": {
+        "public_profile": {
+          "percentage": 15,
+          "future_posts": "Public",
+          "friend_requests": "Everyone"
+        },
+        "friends_only": {
+          "percentage": 60,
+          "future_posts": "Friends", 
+          "friend_requests": "Friends of friends"
+        },
+        "private_profile": {
+          "percentage": 25,
+          "future_posts": "Only me",
+          "friend_requests": "Friends of friends"
+        }
+      }
+    },
+    "linkedin": {
+      "template_size_kb": 25,
+      "expected_compression": 0.92,
+      "user_patterns": {
+        "professional_visibility": {
+          "percentage": 70,
+          "public_profile_visibility": "public",
+          "activity_broadcasts": true
+        },
+        "limited_visibility": {
+          "percentage": 25,
+          "public_profile_visibility": "limited", 
+          "activity_broadcasts": false
+        },
+        "private_professional": {
+          "percentage": 5,
+          "public_profile_visibility": "limited",
+          "activity_broadcasts": false,
+          "profile_discovery": false
+        }
+      }
+    }
+  },
+  "test_scenarios": {
+    "scenario_1": {
+      "name": "Small Scale Test",
+      "users": 100,
+      "expected_template_overhead": "45%",
+      "expected_total_compression": "85%"
+    },
+    "scenario_2": {
+      "name": "Medium Scale Test", 
+      "users": 500,
+      "expected_template_overhead": "9%",
+      "expected_total_compression": "94%"
+    },
+    "scenario_3": {
+      "name": "Large Scale Test",
+      "users": 1000,
+      "expected_template_overhead": "4.5%", 
+      "expected_total_compression": "97%"
+    },
+    "scenario_4": {
+      "name": "Enterprise Scale Test",
+      "users": 10000,
+      "expected_template_overhead": "0.45%",
+      "expected_total_compression": "98.5%"
+    }
+  },
+  "validation_targets": {
+    "minimum_compression_ratio": 0.95,
+    "maximum_template_size_kb": 60,
+    "maximum_average_user_diff_kb": 2,
+    "maximum_worst_case_diff_kb": 5,
+    "minimum_data_integrity_rate": 1.0
+  },
+  "sample_profiles": {
+    "google_privacy_conscious": {
+      "privacy-controls": {
+        "web-activity": false,
+        "location-history": false,
+        "ad-personalization": false,
+        "youtube-history": false,
+        "search-history": false,
+        "assistant-activity": false,
+        "maps-timeline": false,
+        "photos-face-grouping": false,
+        "play-activity": false,
+        "chrome-sync": false,
+        "device-information": false,
+        "voice-audio-activity": false
+      }
+    },
+    "google_balanced": {
+      "privacy-controls": {
+        "web-activity": false,
+        "location-history": false,
+        "ad-personalization": false,
+        "youtube-history": true,
+        "search-history": true,
+        "assistant-activity": false,
+        "maps-timeline": true,
+        "photos-face-grouping": false,
+        "play-activity": true,
+        "chrome-sync": true,
+        "device-information": false,
+        "voice-audio-activity": false
+      }
+    },
+    "facebook_friends_only": {
+      "privacy-settings": {
+        "future-posts": "Friends",
+        "friend-requests": "Friends of friends", 
+        "ad-preferences": false,
+        "face-recognition": false,
+        "location-services": false,
+        "data-sharing": false
+      }
+    },
+    "linkedin_professional": {
+      "profile-privacy": {
+        "public-profile-visibility": "public",
+        "activity-broadcasts": true,
+        "profile-discovery": true,
+        "contact-sync": false,
+        "ad-targeting": true
+      }
+    }
+  }
+}
