@@ -51,17 +51,20 @@
   ],
 
   "optional_permissions": [
-    "*://myaccount.google.com/*",
-    "*://adssettings.google.com/*",
-    "*://myactivity.google.com/*",
-    "*://takeout.google.com/*",
-    "*://www.facebook.com/*",
-    "*://facebook.com/*",
-    "*://m.facebook.com/*",
-    "*://www.linkedin.com/*",
-    "*://linkedin.com/*",
-    "*://platform.openai.com/*",
-    "*://chat.openai.com/*"
+    "tabs"
+  ],
+  "optional_host_permissions": [
+    "https://myaccount.google.com/*",
+    "https://adssettings.google.com/*",
+    "https://myactivity.google.com/*",
+    "https://takeout.google.com/*",
+    "https://www.facebook.com/*",
+    "https://facebook.com/*",
+    "https://m.facebook.com/*",
+    "https://www.linkedin.com/*",
+    "https://linkedin.com/*",
+    "https://platform.openai.com/*",
+    "https://chat.openai.com/*"
   ],
 
   "host_permissions": [

@@ -6,15 +6,15 @@
 
 // Configuration - Browser extension compatible
 const getApiBaseUrl = () => {
-  // Check if we're in production based on extension ID or manifest
   const manifest = chrome.runtime.getManifest();
-  const isProduction = manifest.version_name?.includes('production') || 
-                      chrome.runtime.id !== 'development-extension-id';
-  
-  return isProduction ? 'https://api.privyloop.com' : 'http://localhost:3030';
+  const hosts = manifest.host_permissions || [];
+  if (hosts.includes('http://localhost:3030/*')) return 'http://localhost:3030';
+  if (hosts.includes('http://localhost:3000/*')) return 'http://localhost:3000';
+  return 'https://api.privyloop.com';
 };
 
 const API_BASE_URL = getApiBaseUrl();
+console.log('[PrivyLoop] API_BASE_URL selected:', API_BASE_URL);
 
 const STORAGE_KEYS = {
   USER_ID: 'userId',
@@ -30,8 +30,11 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   
   if (details.reason === 'install') {
     await initializeExtension();
+    // Schedule periodic sync every 24 hours
+    try { chrome.alarms.create('sync-platforms', { periodInMinutes: 1440 }); } catch (_) {}
   } else if (details.reason === 'update') {
     await handleUpdate(details.previousVersion);
+    try { chrome.alarms.create('sync-platforms', { periodInMinutes: 1440 }); } catch (_) {}
   }
 });
 
@@ -39,6 +42,15 @@ chrome.runtime.onStartup.addListener(async () => {
   console.log('PrivyLoop extension started');
   await syncPlatformConfigs();
 });
+
+// Periodic background sync (every 24h)
+try {
+  chrome.alarms.onAlarm.addListener(async (alarm) => {
+    if (alarm?.name === 'sync-platforms') {
+      await syncPlatformConfigs();
+    }
+  });
+} catch (_) {}
 
 // Message handling
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -101,15 +113,37 @@ async function handleUpdate(previousVersion) {
  */
 async function syncPlatformConfigs() {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/scraping/platforms`, {
-      headers: await getAuthHeaders(),
-    });
+    const headers = await (async () => {
+      try { return await getAuthHeaders(); } catch (_) { return {}; }
+    })();
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch platform configs: ${response.statusText}`);
+    const tryFetch = async (base) => {
+      const url = `${base}/api/scraping/platforms`;
+      try {
+        const res = await fetch(url, { headers });
+        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+        const j = await res.json().catch(() => null);
+        const arr = j?.data || j || [];
+        console.log(`[PrivyLoop] Synced platform configs from ${url} → ${arr.length}`);
+        return arr;
+      } catch (e) {
+        console.warn(`[PrivyLoop] Fetch failed at ${url}:`, e?.message || e);
+        return null;
+      }
+    };
+
+    // Try selected base, then alternate localhost ports, then production
+    let platforms = await tryFetch(API_BASE_URL);
+    if (!platforms || !Array.isArray(platforms)) {
+      const alt = API_BASE_URL.includes(':3030') ? 'http://localhost:3000' : 'http://localhost:3030';
+      platforms = await tryFetch(alt);
     }
-
-    const platforms = await response.json();
+    if (!platforms || !Array.isArray(platforms)) {
+      platforms = await tryFetch('https://api.privyloop.com');
+    }
+    if (!platforms || !Array.isArray(platforms)) {
+      throw new Error('All platform config fetch attempts failed');
+    }
     const configsById = {};
 
     for (const platform of platforms) {
