@@ -16,7 +16,9 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:setup": "tsx scripts/db-setup.ts",
-    "db:seed": "tsx scripts/db-seed.ts"
+    "db:seed": "tsx scripts/db-seed.ts",
+    "ai:backfill": "tsx scripts/ai-backfill.ts",
+    "ai:backfill:all": "tsx scripts/ai-backfill.ts --all"
   },
   "dependencies": {
     "drizzle-orm": "^0.33.0",
