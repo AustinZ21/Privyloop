@@ -8,6 +8,9 @@ import { Badge } from 'src/components/ui/badge';
 import { Input } from 'src/components/ui/input';
 import { Progress } from 'src/components/ui/progress';
 import Sidebar from 'src/components/ui/sidebar';
+import { PrivacyAnalysisDialog } from 'src/components/analysis/privacy-analysis-dialog';
+import { useRouter } from 'next/navigation';
+import { flags } from 'src/lib/flags';
 import { 
   Shield, 
   CheckCircle, 
@@ -148,7 +151,7 @@ const RiskBadge = ({ level }: { level: Platform['riskLevel'] }) => {
   );
 };
 
-const PlatformCard = ({ platform, isUpgradeGated = false }: { platform: Platform; isUpgradeGated?: boolean }) => {
+const PlatformCard = ({ platform, isUpgradeGated = false, onViewDetails }: { platform: Platform; isUpgradeGated?: boolean; onViewDetails?: (p: Platform) => void }) => {
   const [isHovered, setIsHovered] = useState(false);
 
   return (
@@ -233,6 +236,7 @@ const PlatformCard = ({ platform, isUpgradeGated = false }: { platform: Platform
           isHovered && "shadow-lg shadow-[#34D3A6]/20"
         )}
         disabled={isUpgradeGated}
+        onClick={() => onViewDetails?.(platform)}
       >
         <Eye className="w-4 h-4 mr-2" />
         View Details
@@ -251,24 +255,185 @@ export function PrivacyDashboard({
 }: PrivacyDashboardProps) {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
+  
+  const [analysisOpen, setAnalysisOpen] = useState(false);
+  const [selectedPlatformId, setSelectedPlatformId] = useState<string | undefined>(undefined);
+  const [selectedPlatformName, setSelectedPlatformName] = useState<string | undefined>(undefined);
+  const router = useRouter();
+  const [metaBySlug, setMetaBySlug] = useState<Record<string, { id: string; slug: string; logoUrl?: string | null }>>({});
+  const [liveList, setLiveList] = useState<Array<{ id: string; name: string; slug: string; logoUrl?: string | null }>>([]);
+  const [displayPlatforms, setDisplayPlatforms] = useState<Platform[]>(platforms);
 
-  const filteredPlatforms = platforms.filter(platform =>
+  const filteredPlatforms = displayPlatforms.filter(platform =>
     platform.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Stats source: prefer merged/enriched list if available; fallback to curated defaults
+  const statsSource = displayPlatforms.length ? displayPlatforms : platforms;
   const scanStatus = {
-    active: platforms.some(p => p.status === 'scanning' || p.status === 'connecting'),
-    count: platforms.filter(p => p.status === 'scanning' || p.status === 'connecting').length
+    active: statsSource.some(p => p.status === 'scanning' || p.status === 'connecting'),
+    count: statsSource.filter(p => p.status === 'scanning' || p.status === 'connecting').length
   };
+  const connectedCount = statsSource.filter(p => p.status === 'connected').length;
+  const highRiskCount = statsSource.filter(p => p.riskLevel === 'high').length;
+  const dataPointsTotal = statsSource.reduce((sum, p) => sum + (p.dataPoints || 0), 0);
+
+  function handleViewDetails(p: Platform) {
+    const slug = p.slug || p.name.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().replace(/\s+/g, '-');
+    const meta = metaBySlug[slug];
+    if (meta?.id) {
+      router.push(`/dashboard/analytics?platformId=${encodeURIComponent(meta.id)}`);
+    } else {
+      router.push(`/dashboard/analytics?platform=${encodeURIComponent(slug)}`);
+    }
+  }
 
   const handleTabClick = (tabId: string) => {
     setActiveTab(tabId);
+    if (tabId === 'analytics') {
+      router.push('/dashboard/analytics');
+    }
   };
 
   useEffect(() => {
     document.documentElement.classList.add('dark');
     return () => document.documentElement.classList.remove('dark');
   }, []);
+
+  // Load platform IDs/slugs to support analytics navigation while keeping current UI unchanged.
+  // NOTE: This does NOT alter card visuals or curated values. It only enables
+  // deep-linking to the Analytics page using real platformId when available.
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await fetch('/api/scraping/platforms');
+        const json = await res.json();
+        if (!json?.success || !Array.isArray(json.data)) return;
+        const map: Record<string, { id: string; slug: string; logoUrl?: string | null }> = {};
+        const list: Array<{ id: string; name: string; slug: string; logoUrl?: string | null }> = [];
+        for (const p of json.data) {
+          map[p.slug] = { id: p.id, slug: p.slug, logoUrl: p.logoUrl ?? null };
+          list.push({ id: p.id, name: p.name, slug: p.slug, logoUrl: p.logoUrl ?? null });
+        }
+        if (mounted) {
+          setMetaBySlug(map);
+          setLiveList(list);
+        }
+      } catch {
+        // ignore silently to avoid UI disruption
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  // Merge default design cards with live DB platforms without changing visuals.
+  useEffect(() => {
+    // Helper for slug from name
+    const toSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().replace(/\s+/g, '-');
+
+    // 1) Start with curated default cards to preserve order/visuals
+    const bySlug = new Map<string, Platform>();
+    const seeded: Platform[] = platforms.map((p) => {
+      const slug = (p as any).slug || toSlug(p.name);
+      const meta = metaBySlug[slug];
+      const merged: Platform = {
+        ...p,
+        slug,
+        platformId: meta?.id,
+      };
+      bySlug.set(slug, merged);
+      return merged;
+    });
+
+    // 2) Append extra live platforms not in defaults
+    const extras: Platform[] = [];
+    for (const lp of liveList) {
+      if (bySlug.has(lp.slug)) continue;
+      extras.push({
+        id: lp.slug,
+        name: lp.name,
+        icon: (
+          <div className="w-6 h-6 bg-neutral-700 rounded-full flex items-center justify-center text-white text-xs font-bold">
+            {lp.name.charAt(0)}
+          </div>
+        ),
+        status: 'connected',
+        riskLevel: 'medium',
+        dataPoints: 0,
+        privacyScore: undefined,
+        slug: lp.slug,
+        platformId: lp.id,
+      });
+    }
+
+    setDisplayPlatforms([...seeded, ...extras]);
+  }, [platforms, metaBySlug, liveList]);
+
+  // Enrich card values (lastScan, privacyScore, risk badge) using AI analysis; keep UI design intact.
+  // IMPORTANT: Controlled by flags.liveCards to avoid accidental design regressions
+  // or inconsistent demo data. When off, curated values remain as-is.
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      if (!Object.keys(metaBySlug).length) return;
+      const updated = await Promise.all(
+        displayPlatforms.map(async (p) => {
+          try {
+            const slug = (p as any).slug || p.name.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().replace(/\s+/g, '-');
+            const meta = metaBySlug[slug];
+            if (!meta?.id) return p;
+            const res = await fetch(`/api/ai/analysis?platformId=${encodeURIComponent(meta.id)}`);
+            if (!res.ok) return p;
+            const json = await res.json();
+            const ai = json?.data?.aiAnalysis;
+            if (!ai) return p;
+            const score = Math.max(0, Math.min(100, Math.round(100 - (ai.overallRiskScore ?? 50))));
+            const next: Platform = { ...p };
+            if (flags.liveCards) {
+              // Overlay all live card metrics when available, else keep curated.
+              if (Number.isFinite(score)) next.privacyScore = score;
+              if (typeof ai.generatedAt === 'string') next.lastScan = formatRelativeTime(ai.generatedAt) || p.lastScan;
+              const impact = (ai.privacyImpact as 'low' | 'medium' | 'high') || (ai.overallRiskScore >= 67 ? 'high' : ai.overallRiskScore >= 34 ? 'medium' : 'low');
+              if (impact) next.riskLevel = impact;
+            }
+            return next;
+          } catch {
+            return p;
+          }
+        })
+      );
+       if (mounted) {
+         // Avoid update loops: only set if key overlay fields changed
+         let changed = false;
+         for (let i = 0; i < updated.length; i++) {
+           const a = updated[i];
+           const b = displayPlatforms[i];
+           if (!b || a.privacyScore !== b.privacyScore || a.lastScan !== b.lastScan || a.riskLevel !== b.riskLevel) {
+             changed = true;
+             break;
+           }
+         }
+         if (changed) setDisplayPlatforms(updated);
+       }
+    })();
+    return () => { mounted = false; };
+  }, [displayPlatforms, metaBySlug]);
+
+  function formatRelativeTime(isoTs?: string): string | undefined {
+    if (!isoTs) return undefined;
+    const now = Date.now();
+    const t = new Date(isoTs).getTime();
+    if (!Number.isFinite(t)) return undefined;
+    const sec = Math.max(0, Math.floor((now - t) / 1000));
+    if (sec < 60) return `${sec}s ago`;
+    const min = Math.floor(sec / 60);
+    if (min < 60) return `${min} min${min === 1 ? '' : 's'} ago`;
+    const hr = Math.floor(min / 60);
+    if (hr < 24) return `${hr} hour${hr === 1 ? '' : 's'} ago`;
+    const day = Math.floor(hr / 24);
+    return `${day} day${day === 1 ? '' : 's'} ago`;
+  }
 
   return (
     <div className="h-screen bg-[#0B0F12] text-white flex overflow-hidden">
@@ -341,7 +506,7 @@ export function PrivacyDashboard({
                 <div>
                   <p className="text-neutral-400 text-sm">Connected Platforms</p>
                   <p className="text-xl sm:text-2xl font-bold text-white">
-                    {platforms.filter(p => p.status === 'connected').length}
+                    {connectedCount}
                   </p>
                 </div>
                 <Wifi className="w-6 h-6 sm:w-8 sm:h-8 text-brand-500" />
@@ -353,7 +518,7 @@ export function PrivacyDashboard({
                 <div>
                   <p className="text-neutral-400 text-sm">High Risk</p>
                   <p className="text-2xl font-bold text-red-400">
-                    {platforms.filter(p => p.riskLevel === 'high').length}
+                    {highRiskCount}
                   </p>
                 </div>
                 <AlertTriangle className="w-6 h-6 sm:w-8 sm:h-8 text-red-400" />
@@ -365,7 +530,7 @@ export function PrivacyDashboard({
                 <div>
                   <p className="text-neutral-400 text-sm">Data Points</p>
                   <p className="text-xl sm:text-2xl font-bold text-white">
-                    {platforms.reduce((sum, p) => sum + (p.dataPoints || 0), 0).toLocaleString()}
+                    {dataPointsTotal.toLocaleString()}
                   </p>
                 </div>
                 <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-brand-500" />
@@ -392,6 +557,7 @@ export function PrivacyDashboard({
                 key={platform.id} 
                 platform={platform}
                 isUpgradeGated={showUpgradeHint && index >= freeLimit}
+                onViewDetails={handleViewDetails}
               />
             ))}
           </div>
@@ -416,6 +582,7 @@ export function PrivacyDashboard({
             </Card>
           )}
         </main>
+        {/* Analysis dialog overlay (legacy, unused; navigation used instead) */}
       </div>
     </div>
   );
