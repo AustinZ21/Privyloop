@@ -4,7 +4,8 @@
  * Initialize database, run migrations, and seed with sample data
  */
 
-import { getDb, closeConnection, testConnection, runMigrations, getMigrationStatus } from '../src/database/connection';
+import { getDb, closeConnection, testConnection } from '../src/database/connection';
+import { runMigrations, getMigrationStatus } from '../src/database/migrations';
 import { migration001 } from '../src/database/migrations/001-initial-schema';
 import { seedDatabase, seedIfNeeded, isDatabaseSeeded } from '../src/database/seeds';
 

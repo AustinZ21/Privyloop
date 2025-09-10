@@ -17,7 +17,7 @@ export const migration001: Migration = {
     
     // Create users table
     await db.execute(sql`
-      CREATE TABLE users (
+      CREATE TABLE IF NOT EXISTS users (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         email VARCHAR(255) NOT NULL UNIQUE,
         email_verified BOOLEAN NOT NULL DEFAULT false,
@@ -41,7 +41,7 @@ export const migration001: Migration = {
 
     // Create platforms table
     await db.execute(sql`
-      CREATE TABLE platforms (
+      CREATE TABLE IF NOT EXISTS platforms (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         name VARCHAR(100) NOT NULL UNIQUE,
         slug VARCHAR(50) NOT NULL UNIQUE,
@@ -64,7 +64,7 @@ export const migration001: Migration = {
 
     // Create privacy_templates table (template-based optimization)
     await db.execute(sql`
-      CREATE TABLE privacy_templates (
+      CREATE TABLE IF NOT EXISTS privacy_templates (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         platform_id UUID NOT NULL REFERENCES platforms(id) ON DELETE CASCADE,
         version VARCHAR(50) NOT NULL,
@@ -85,7 +85,7 @@ export const migration001: Migration = {
 
     // Create user_platform_connections table
     await db.execute(sql`
-      CREATE TABLE user_platform_connections (
+      CREATE TABLE IF NOT EXISTS user_platform_connections (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         platform_id UUID NOT NULL REFERENCES platforms(id) ON DELETE CASCADE,
@@ -112,7 +112,7 @@ export const migration001: Migration = {
 
     // Create privacy_snapshots table (user-specific diffs)
     await db.execute(sql`
-      CREATE TABLE privacy_snapshots (
+      CREATE TABLE IF NOT EXISTS privacy_snapshots (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         platform_id UUID NOT NULL REFERENCES platforms(id) ON DELETE CASCADE,
@@ -140,9 +140,9 @@ export const migration001: Migration = {
 
     // Create Better Auth tables
     await db.execute(sql`
-      CREATE TABLE sessions (
+      CREATE TABLE IF NOT EXISTS sessions (
         id TEXT PRIMARY KEY,
-        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        user_id UUID NOT NULL,
         expires_at TIMESTAMP NOT NULL,
         token TEXT NOT NULL,
         created_at TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -151,9 +151,9 @@ export const migration001: Migration = {
     `);
 
     await db.execute(sql`
-      CREATE TABLE accounts (
+      CREATE TABLE IF NOT EXISTS accounts (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        user_id UUID NOT NULL,
         account_id TEXT NOT NULL,
         provider TEXT NOT NULL,
         provider_account_id TEXT NOT NULL,
@@ -170,7 +170,7 @@ export const migration001: Migration = {
     `);
 
     await db.execute(sql`
-      CREATE TABLE verification_tokens (
+      CREATE TABLE IF NOT EXISTS verification_tokens (
         identifier TEXT NOT NULL,
         token TEXT NOT NULL,
         expires_at TIMESTAMP NOT NULL,
@@ -181,7 +181,7 @@ export const migration001: Migration = {
 
     // Create audit_logs table
     await db.execute(sql`
-      CREATE TABLE audit_logs (
+      CREATE TABLE IF NOT EXISTS audit_logs (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         event_type VARCHAR(50) NOT NULL,
         event_category VARCHAR(30) NOT NULL,
@@ -206,46 +206,46 @@ export const migration001: Migration = {
     // Create indexes for performance
     // Privacy templates indexes
     await db.execute(sql`
-      CREATE INDEX privacy_templates_platform_version_idx ON privacy_templates(platform_id, version);
-      CREATE INDEX privacy_templates_active_idx ON privacy_templates(platform_id, is_active);
-      CREATE INDEX privacy_templates_hash_idx ON privacy_templates(template_hash);
+      CREATE INDEX IF NOT EXISTS privacy_templates_platform_version_idx ON privacy_templates(platform_id, version);
+      CREATE INDEX IF NOT EXISTS privacy_templates_active_idx ON privacy_templates(platform_id, is_active);
+      CREATE INDEX IF NOT EXISTS privacy_templates_hash_idx ON privacy_templates(template_hash);
     `);
 
     // User platform connections indexes
     await db.execute(sql`
-      CREATE INDEX user_connections_user_platform_idx ON user_platform_connections(user_id, platform_id);
-      CREATE INDEX user_connections_active_idx ON user_platform_connections(user_id, is_active);
-      CREATE INDEX user_connections_scan_schedule_idx ON user_platform_connections(next_scheduled_scan);
-      CREATE INDEX user_connections_scan_enabled_idx ON user_platform_connections(scan_enabled, next_scheduled_scan);
+      CREATE INDEX IF NOT EXISTS user_connections_user_platform_idx ON user_platform_connections(user_id, platform_id);
+      CREATE INDEX IF NOT EXISTS user_connections_active_idx ON user_platform_connections(user_id, is_active);
+      CREATE INDEX IF NOT EXISTS user_connections_scan_schedule_idx ON user_platform_connections(next_scheduled_scan);
+      CREATE INDEX IF NOT EXISTS user_connections_scan_enabled_idx ON user_platform_connections(scan_enabled, next_scheduled_scan);
     `);
 
     // Privacy snapshots indexes
     await db.execute(sql`
-      CREATE INDEX privacy_snapshots_user_platform_idx ON privacy_snapshots(user_id, platform_id);
-      CREATE INDEX privacy_snapshots_user_scanned_idx ON privacy_snapshots(user_id, scanned_at);
-      CREATE INDEX privacy_snapshots_changes_idx ON privacy_snapshots(has_changes, scanned_at);
-      CREATE INDEX privacy_snapshots_template_idx ON privacy_snapshots(template_id);
-      CREATE INDEX privacy_snapshots_retention_idx ON privacy_snapshots(expires_at);
+      CREATE INDEX IF NOT EXISTS privacy_snapshots_user_platform_idx ON privacy_snapshots(user_id, platform_id);
+      CREATE INDEX IF NOT EXISTS privacy_snapshots_user_scanned_idx ON privacy_snapshots(user_id, scanned_at);
+      CREATE INDEX IF NOT EXISTS privacy_snapshots_changes_idx ON privacy_snapshots(has_changes, scanned_at);
+      CREATE INDEX IF NOT EXISTS privacy_snapshots_template_idx ON privacy_snapshots(template_id);
+      CREATE INDEX IF NOT EXISTS privacy_snapshots_retention_idx ON privacy_snapshots(expires_at);
     `);
 
     // Better Auth indexes
     await db.execute(sql`
-      CREATE INDEX sessions_user_id_idx ON sessions(user_id);
-      CREATE INDEX sessions_expires_at_idx ON sessions(expires_at);
-      CREATE INDEX sessions_token_idx ON sessions(token);
-      CREATE INDEX accounts_user_id_idx ON accounts(user_id);
-      CREATE INDEX accounts_provider_idx ON accounts(provider, provider_account_id);
-      CREATE INDEX verification_tokens_expires_at_idx ON verification_tokens(expires_at);
+      CREATE INDEX IF NOT EXISTS sessions_user_id_idx ON sessions(user_id);
+      CREATE INDEX IF NOT EXISTS sessions_expires_at_idx ON sessions(expires_at);
+      CREATE INDEX IF NOT EXISTS sessions_token_idx ON sessions(token);
+      CREATE INDEX IF NOT EXISTS accounts_user_id_idx ON accounts(user_id);
+      CREATE INDEX IF NOT EXISTS accounts_provider_idx ON accounts(provider, provider_account_id);
+      CREATE INDEX IF NOT EXISTS verification_tokens_expires_at_idx ON verification_tokens(expires_at);
     `);
 
     // Audit logs indexes
     await db.execute(sql`
-      CREATE INDEX audit_logs_event_type_idx ON audit_logs(event_type, created_at);
-      CREATE INDEX audit_logs_user_idx ON audit_logs(user_id, created_at);
-      CREATE INDEX audit_logs_platform_idx ON audit_logs(platform_id, created_at);
-      CREATE INDEX audit_logs_severity_idx ON audit_logs(severity, created_at);
-      CREATE INDEX audit_logs_category_idx ON audit_logs(event_category, created_at);
-      CREATE INDEX audit_logs_retention_idx ON audit_logs(expires_at);
+      CREATE INDEX IF NOT EXISTS audit_logs_event_type_idx ON audit_logs(event_type, created_at);
+      CREATE INDEX IF NOT EXISTS audit_logs_user_idx ON audit_logs(user_id, created_at);
+      CREATE INDEX IF NOT EXISTS audit_logs_platform_idx ON audit_logs(platform_id, created_at);
+      CREATE INDEX IF NOT EXISTS audit_logs_severity_idx ON audit_logs(severity, created_at);
+      CREATE INDEX IF NOT EXISTS audit_logs_category_idx ON audit_logs(event_category, created_at);
+      CREATE INDEX IF NOT EXISTS audit_logs_retention_idx ON audit_logs(expires_at);
     `);
 
     console.log('✅ Initial schema created with template-based optimization');
