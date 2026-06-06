@@ -66,3 +66,6 @@ packages/web/nul
 # Local dev snapshots
 tmp_*.html
 
+# Local graphify outputs
+graphify-out/cache/
+
