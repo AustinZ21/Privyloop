@@ -14,9 +14,13 @@ This repository is a monorepo prototype for a dual-mode product:
 
 ## Product Preview
 
-| Landing Page | Privacy Dashboard |
-| --- | --- |
-| ![PrivyLoop landing page](docs/images/privyloop-landing.png) | ![PrivyLoop dashboard](docs/images/privyloop-dashboard.png) |
+### Landing Page
+
+![PrivyLoop landing page](docs/images/privyloop-landing.png)
+
+### Privacy Dashboard
+
+![PrivyLoop dashboard](docs/images/privyloop-dashboard.png)
 
 ## What It Does
 
