@@ -36,6 +36,10 @@ const API_AUTH_ROUTES = [
   '/api/auth',
 ];
 
+function matchesRoute(pathname: string, route: string): boolean {
+  return pathname === route || pathname.startsWith(`${route}/`);
+}
+
 // Helper function to check if user is authenticated
 async function isAuthenticated(request: NextRequest): Promise<boolean> {
   try {
@@ -60,7 +64,7 @@ export async function middleware(request: NextRequest) {
   const isAuth = await isAuthenticated(request);
 
   // Allow API auth routes to pass through
-  if (API_AUTH_ROUTES.some(route => pathname.startsWith(route))) {
+  if (API_AUTH_ROUTES.some(route => matchesRoute(pathname, route))) {
     return NextResponse.next();
   }
 
@@ -70,7 +74,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Handle auth routes (login, signup, forgot-password)
-  if (AUTH_ROUTES.some(route => pathname.startsWith(route))) {
+  if (AUTH_ROUTES.some(route => matchesRoute(pathname, route))) {
     if (isAuth) {
       // Authenticated users shouldn't access auth pages
       const redirectUrl = searchParams.get('redirect') || '/dashboard';
@@ -81,7 +85,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Handle protected routes
-  if (PROTECTED_ROUTES.some(route => pathname.startsWith(route))) {
+  if (PROTECTED_ROUTES.some(route => matchesRoute(pathname, route))) {
     if (!isAuth) {
       // Store the original URL for redirect after login
       const loginUrl = new URL('/', request.url);

@@ -5,12 +5,18 @@
 [![Next.js](https://img.shields.io/badge/Next.js-15-111111?logo=next.js&logoColor=white)](https://nextjs.org/)
 [![Playwright](https://img.shields.io/badge/Tested%20With-Playwright-45ba63?logo=playwright&logoColor=white)](https://playwright.dev/)
 
-PrivyLoop is a privacy-focused platform for tracking and understanding changes to privacy settings across major online platforms. It combines a web dashboard, platform-specific scraping logic, AI-generated plain-English explanations, and a browser-extension path for privacy monitoring workflows.
+PrivyLoop is a privacy intelligence platform for monitoring, interpreting, and managing privacy changes across major online platforms. Built for both self-hosted and managed deployments, it combines a web dashboard, browser-extension-based monitoring, and AI-generated plain-English explanations into one privacy control workflow.
 
 This repository is a monorepo prototype for a dual-mode product:
 
 - **self-hosted** for users who want control over data and infrastructure
 - **managed cloud** for a hosted privacy monitoring experience
+
+## Product Preview
+
+| Landing Page | Privacy Dashboard |
+| --- | --- |
+| ![PrivyLoop landing page](docs/images/privyloop-landing.png) | ![PrivyLoop dashboard](docs/images/privyloop-dashboard.png) |
 
 ## What It Does
 
@@ -20,6 +26,10 @@ This repository is a monorepo prototype for a dual-mode product:
 - organizes supported platforms such as Google, Facebook, LinkedIn, OpenAI, and Claude
 - supports a web dashboard plus an extension-oriented monitoring path
 - keeps core business logic in shared TypeScript packages across deployments
+
+## Browser Extension Preview
+
+![PrivyLoop browser extension popup](docs/images/privyloop-extension.png)
 
 ## Repo Structure
 
