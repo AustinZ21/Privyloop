@@ -110,3 +110,8 @@ Agents integrate seamlessly with the PM command system:
 - Results → Consolidated back to main thread
 
 This creates a hierarchy that maximizes parallelism while preserving context at every level.
+
+<!-- SPECKIT START -->
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan
+<!-- SPECKIT END -->
